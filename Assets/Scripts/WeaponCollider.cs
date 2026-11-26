@@ -1,0 +1,153 @@
+using UnityEngine;
+using System.Collections.Generic; 
+
+public class WeaponCollider : MonoBehaviour
+{
+    private Unit ownerUnit;
+    private Collider weaponCollider;
+    
+    [Header("Combat Sounds")]
+    [SerializeField] private AudioClip weaponHitSound; // Звук удара оружием
+
+    [Header("VFX")]
+    [SerializeField] private GameObject swordHitVfxPrefab;
+    [SerializeField] private float hitShakeDuration = 0.08f;
+    [SerializeField] private float hitShakeMagnitude = 0.03f;
+    
+    // Отслеживаем цели, которые уже были поражены в текущем контакте
+    private HashSet<Collider> targetsHitInContact = new HashSet<Collider>(); 
+
+    void Start()
+    {
+        ownerUnit = GetComponentInParent<Unit>();
+        
+        if (ownerUnit == null)
+        {
+            Debug.LogError("WeaponCollider должен быть прикреплен к объекту, который является дочерним элементом юнита (Unit)!");
+            return;
+        }
+
+        weaponCollider = GetComponent<Collider>();
+        if (weaponCollider != null)
+        {
+            weaponCollider.isTrigger = true;
+            // Коллайдер активен по умолчанию, как вы просили.
+        }
+    }
+    
+    // Этот метод теперь не используется, но оставлен пустым.
+    public void SetColliderActive(bool isActive)
+    {
+        // Временно ничего не делаем, чтобы коллайдер был всегда активен.
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        // 1. ПРОВЕРКА ХОДА: Разрешаем наносить урон ТОЛЬКО, если сейчас ход владельца этого оружия.
+        if (GameManager.Instance == null || ownerUnit == null || GameManager.Instance.currentPlayer != ownerUnit.owner) 
+        {
+            return;
+        }
+        
+        // 2. ПРОВЕРКА АТАКИ: Урон наносится ТОЛЬКО во время активной атаки (проверка состояния аниматора)
+        if (!ownerUnit.IsAttacking())
+        {
+            return;
+        }
+        
+        // 3. Проверяем, был ли этот объект уже поражен в этом контакте
+        if (targetsHitInContact.Contains(other)) return; 
+
+        Unit target = other.GetComponentInParent<Unit>();
+
+        // 4. ПРОВЕРКА ЦЕЛИ: Убеждаемся, что цель принадлежит противнику.
+        if (target != null && target != ownerUnit && target.owner != ownerUnit.owner)
+        {
+            // 5. ПРОВЕРКА QTE: Если атака была заблокирована через QTE, не наносим урон
+            if (QTESystem.Instance != null && QTESystem.Instance.WasAttackBlocked(ownerUnit, target))
+            {
+                // Атака была заблокирована - не наносим урон
+                targetsHitInContact.Add(other); // Помечаем как пораженную, чтобы не обрабатывать повторно
+                return;
+            }
+            
+            // Вычисляем финальный урон с учетом множителя способности (Ферзь)
+            int finalDamage = Mathf.RoundToInt(ownerUnit.Damage * ownerUnit.GetDamageMultiplier());
+            
+            // Воспроизводим звук удара оружием
+            PlayWeaponHitSound();
+
+            // VFX попадания мечом (по точке контакта)
+            SpawnSwordHitVfx(other);
+            DoCameraShake();
+            
+            // Наносим урон цели, передавая атакующего для отражения урона (Слон)
+            target.TakeDamage(finalDamage, ownerUnit);
+            
+            // Запоминаем цель, чтобы не ударить дважды
+            targetsHitInContact.Add(other);
+        }
+    }
+
+    private void SpawnSwordHitVfx(Collider other)
+    {
+        if (swordHitVfxPrefab == null) return;
+        if (other == null) return;
+        Vector3 p = other.ClosestPoint(transform.position);
+        Quaternion rot = ownerUnit != null ? Quaternion.LookRotation(ownerUnit.transform.forward) : Quaternion.identity;
+        GameObject go = Instantiate(swordHitVfxPrefab, p, rot);
+        AutoDestroyVfx(go);
+    }
+
+    private void DoCameraShake()
+    {
+        if (hitShakeDuration <= 0f || hitShakeMagnitude <= 0f) return;
+        if (CameraShake.Instance == null) return;
+        CameraShake.Instance.Shake(hitShakeDuration, hitShakeMagnitude);
+    }
+
+    private static void AutoDestroyVfx(GameObject go)
+    {
+        if (go == null) return;
+        float ttl = 2.5f;
+        ParticleSystem ps = go.GetComponentInChildren<ParticleSystem>();
+        if (ps != null)
+        {
+            var main = ps.main;
+            ttl = Mathf.Max(0.1f, main.duration + main.startLifetime.constantMax);
+        }
+        Destroy(go, ttl);
+    }
+    
+    // Очищаем список целей, когда они выходят из триггера
+    void OnTriggerExit(Collider other)
+    {
+        targetsHitInContact.Remove(other);
+    }
+    
+    /// <summary>
+    /// Очищает список пораженных целей (вызывается при начале новой атаки)
+    /// </summary>
+    public void ClearHitTargets()
+    {
+        targetsHitInContact.Clear();
+    }
+    
+    /// <summary>
+    /// Воспроизводит звук удара оружием (использует combatSource из Unit)
+    /// </summary>
+    private void PlayWeaponHitSound()
+    {
+        if (weaponHitSound != null && ownerUnit != null)
+        {
+            // Используем combatSource из Unit для боевых звуков
+            AudioSource combatSource = ownerUnit.GetCombatAudioSource();
+            if (combatSource != null)
+            {
+                // Воспроизводим звук атаки сразу (первым, до звука получения урона)
+                float volume = AudioManager.Instance != null ? AudioManager.Instance.SFXVolume : 1f;
+                combatSource.PlayOneShot(weaponHitSound, volume);
+            }
+        }
+    }
+}

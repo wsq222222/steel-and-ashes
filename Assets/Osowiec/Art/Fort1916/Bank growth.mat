@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Bank growth
+  m_Shader: {fileID: 4800000, guid: 07a6a75fee3f9654599896ff1c2e148f, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Earth:
+        m_Texture: {fileID: 2800000, guid: 6915f7fad3472a243b1b902d3c3af5b8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EarthMask:
+        m_Texture: {fileID: 2800000, guid: c480570bbbf04fd48b30663c1d67b9ca, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EarthNormal:
+        m_Texture: {fileID: 2800000, guid: e3fd250d802460a4d8c2a3fb83f31936, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sod:
+        m_Texture: {fileID: 2800000, guid: 2ba999a4c4a731e47a47bbbddc4797dd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SodMask:
+        m_Texture: {fileID: 2800000, guid: 35874ed7b5682b94d9a59e17e7c877c7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SodNormal:
+        m_Texture: {fileID: 2800000, guid: 1c9bbd1b168b0fa4389898bf4263273a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Till:
+        m_Texture: {fileID: 2800000, guid: 85ce6e09853eac9449d1871698c0543a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TillNormal:
+        m_Texture: {fileID: 2800000, guid: d5d141afaca6f1d4db18e39d4715ad18, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TillMask:
+        m_Texture: {fileID: 2800000, guid: a62191b76c138ac4fbbf8df406b52639, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

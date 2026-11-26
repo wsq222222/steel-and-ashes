@@ -1,0 +1,830 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
+
+/// <summary>
+/// Фаза расстановки армии (PvBot, Player1): бюджет очков, зона на сетке, карточки → перетаскивание на поле.
+///
+/// Подключение к миссии (например mission1):
+/// 1) Режим игры PvBot (GameManager / меню).
+/// 2) Добавь пустой GameObject, повесь ArmyDeploymentController.
+/// 3) Заполни offers (префабы из Assets/Prefabs, costPoints, maxCopies = -1 без лимита).
+/// 4) Выставь deploymentZoneMin/Max в координатах сетки ChessGrid (сторона игрока).
+/// 5) Отключи или удали предрасставленных юнитов Player1 в иерархии (например объект Player1Units),
+///    иначе они займут клетки и пересекутся с расстановкой.
+/// 6) Оставь Create Minimal UI If Missing = true для автопанели или назначь свой deploymentRoot вручную.
+/// </summary>
+public class ArmyDeploymentController : MonoBehaviour
+{
+    [Header("Бюджет и зона (координаты сетки, включительно)")]
+    [SerializeField] private int armyPointBudget = 12;
+    [SerializeField] private Vector2Int deploymentZoneMin = new Vector2Int(0, 0);
+    [SerializeField] private Vector2Int deploymentZoneMax = new Vector2Int(7, 2);
+
+    [Header("Доступные типы (карточки)")]
+    [SerializeField] private List<DeploymentOfferEntry> offers = new List<DeploymentOfferEntry>();
+
+    [Header("UI")]
+    [Tooltip("Если null и включено Create Minimal UI If Missing — создаётся Canvas с панелью.")]
+    [SerializeField] private GameObject deploymentRoot;
+    [SerializeField] private DeploymentCardUI cardPrefab;
+    [Tooltip("Родитель карточек (Horizontal Layout). Если null — создаётся вместе с минимальным UI.")]
+    [SerializeField] private Transform cardHandContainer;
+    [Tooltip("Зона «вернуть юнита» (нижняя панель). Drop с поля сюда отменяет перетаскивание.")]
+    [SerializeField] private RectTransform returnDropZone;
+    [SerializeField] private Slider budgetSlider;
+    [SerializeField] private Button confirmButton;
+    [SerializeField] private TMP_Text confirmHintText;
+    [SerializeField] private DeploymentUnitInfoPanelUI unitInfoPanel;
+    [Tooltip("Спрайт панели по умолчанию (цельная картинка из Figma), если у карточки нет своего.")]
+    [SerializeField] private Sprite defaultUnitInfoPanelSprite;
+
+    [SerializeField] private bool createMinimalUiIfMissing = true;
+
+    [Header("Правила готовности")]
+    [SerializeField] private bool requireAtLeastOneUnit = true;
+    [SerializeField] private bool requireExactlyOneKing = true;
+    [SerializeField] private bool requireDeployedInfantry;
+
+    [Header("Spawn orientation (deployment)")]
+    [Tooltip("Поворот юнитов при размещении (Yaw вокруг Y). 0 = смотреть по +Z (вперёд), 90 = вправо, -90 = влево.")]
+    [SerializeField] private float deploymentSpawnYawDegrees = 0f;
+
+    [Header("Визуал зоны размещения")]
+    [SerializeField] private bool showDeploymentZoneOverlay = true;
+    [SerializeField] private Color deploymentZoneColor = new Color(0.2f, 0.85f, 0.45f, 0.38f);
+    [Tooltip("Смещение над плоскостью ChessGrid, чтобы не мерцало с полом.")]
+    [SerializeField] private float deploymentZoneYOffset = 0.04f;
+
+    public OsowiecDeploymentSectors Sectors { get; private set; }
+    private int pointsRemaining;
+    private int[] spawnedPerOffer = Array.Empty<int>();
+    private readonly Dictionary<Unit, DeploymentRecord> deployed = new Dictionary<Unit, DeploymentRecord>();
+
+    /// <summary> Дочерние плейны подсветки клеток; уничтожаются при «Готов». </summary>
+    private GameObject deploymentZoneVisualRoot;
+
+    private Material deploymentZoneSharedMaterial;
+
+    private struct DeploymentRecord
+    {
+        public int OfferIndex;
+        public int Cost;
+    }
+
+    void Awake()
+    {
+        Sectors=GetComponent<OsowiecDeploymentSectors>();
+        spawnedPerOffer = new int[offers != null ? offers.Count : 0];
+        if (createMinimalUiIfMissing && deploymentRoot == null && offers != null && offers.Count > 0)
+            BuildMinimalDeploymentUi();
+    }
+
+    /// <summary>
+    /// Ждём GameManager: при загрузке сцены порядок скриптов не гарантирован — раньше Instance мог быть null и фаза не включалась.
+    /// </summary>
+    private IEnumerator Start()
+    {
+        const float maxWaitSeconds = 20f;
+        float waited = 0f;
+        while (GameManager.Instance == null && waited < maxWaitSeconds)
+        {
+            waited += Time.deltaTime;
+            yield return null;
+        }
+
+        if (GameManager.Instance == null)
+        {
+            Debug.LogError("[ArmyDeploymentController] GameManager.Instance не найден — фаза расстановки не активирована. Проверь, что в сцене есть GameManager.");
+            enabled = false;
+            yield break;
+        }
+
+        if (GameManager.Instance.GetGameMode() != GameMode.PlayerVsBot)
+        {
+            Debug.LogWarning("[ArmyDeploymentController] Режим не PlayerVsBot — расстановка отключена. В меню выбери игру против бота или на GameManager выставь Test Game Mode = PlayerVsBot при запуске сцены напрямую.");
+            if (deploymentRoot != null)
+                deploymentRoot.SetActive(false);
+            enabled = false;
+            yield break;
+        }
+
+        if (offers == null || offers.Count == 0)
+        {
+            Debug.LogError("[ArmyDeploymentController] Заполни offers (префабы юнитов в списке).");
+            enabled = false;
+            yield break;
+        }
+
+        if (deploymentRoot == null || cardHandContainer == null)
+        {
+            Debug.LogError("[ArmyDeploymentController] Нет UI расстановки (deploymentRoot / cardHandContainer). Включи Create Minimal UI If Missing или назначь ссылки.");
+            enabled = false;
+            yield break;
+        }
+
+        pointsRemaining = Mathf.Max(0, armyPointBudget);
+        GameManager.Instance.BeginArmyDeploymentPhase();
+        Debug.Log("[ArmyDeploymentController] Фаза расстановки армии активна — кость недоступна до кнопки «Готов».");
+
+        EnsureEventSystemExists();
+        deploymentRoot.SetActive(true);
+
+        // Камера для расстановки: строго сверху вниз.
+        if (CameraManager.Instance != null)
+            CameraManager.Instance.EnterArmyDeploymentCamera();
+
+        // В расстановке показываем модели (тела) юнитов.
+        TacticalUnitPresentation.ApplyGlobal(false);
+
+        BuildCards();
+        RefreshBudgetLabel();
+        UpdateConfirmButtonState();
+        HideUnitInfoPanel();
+
+        if (confirmButton != null)
+        {
+            confirmButton.onClick.RemoveListener(OnConfirmClicked);
+            confirmButton.onClick.AddListener(OnConfirmClicked);
+        }
+
+        if (Sectors) Sectors.ShowPositions();
+        else BuildDeploymentZoneVisual();
+    }
+
+    void OnDestroy()
+    {
+        if (confirmButton != null)
+            confirmButton.onClick.RemoveListener(OnConfirmClicked);
+        DestroyDeploymentZoneVisual();
+    }
+
+    private void BuildCards()
+    {
+        if (cardHandContainer == null || offers == null) return;
+
+        for (int i = 0; i < cardHandContainer.childCount; i++)
+            Destroy(cardHandContainer.GetChild(i).gameObject);
+
+        for (int i = 0; i < offers.Count; i++)
+        {
+            DeploymentOfferEntry e = offers[i];
+            if (e.unitPrefab == null) continue;
+
+            DeploymentCardUI card;
+            if (cardPrefab != null)
+            {
+                card = Instantiate(cardPrefab, cardHandContainer);
+            }
+            else
+            {
+                GameObject go = CreateRuntimeDeploymentCardObject();
+                card = go.GetComponent<DeploymentCardUI>();
+            }
+
+            card.Setup(this, i, e);
+        }
+    }
+
+    private GameObject CreateRuntimeDeploymentCardObject()
+    {
+        GameObject root = new GameObject("DeploymentCard");
+        root.transform.SetParent(cardHandContainer, false);
+        RectTransform rt = root.AddComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(120, 140);
+
+        Image bg = root.AddComponent<Image>();
+        bg.color = new Color(0.12f, 0.14f, 0.2f, 0.98f);
+        bg.raycastTarget = true;
+
+        TMP_Text titleTmp = CreateTmpText(root.transform, "Title", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0, -6), new Vector2(-10, 26), 13f, TextAlignmentOptions.Top);
+        TMP_Text costTmp = CreateTmpText(root.transform, "Cost", new Vector2(1f, 0f), new Vector2(1f, 0f),
+            new Vector2(-8, 8), new Vector2(44, 28), 16f, TextAlignmentOptions.BottomRight);
+
+        GameObject iconGo = new GameObject("Icon");
+        iconGo.transform.SetParent(root.transform, false);
+        RectTransform irt = iconGo.AddComponent<RectTransform>();
+        irt.anchorMin = new Vector2(0.5f, 0.5f);
+        irt.anchorMax = new Vector2(0.5f, 0.5f);
+        irt.sizeDelta = new Vector2(72, 72);
+        irt.anchoredPosition = new Vector2(0, -6);
+        Image iconImg = iconGo.AddComponent<Image>();
+        iconImg.color = Color.white;
+        iconImg.raycastTarget = false;
+
+        var card = root.AddComponent<DeploymentCardUI>();
+        card.SetRuntimeRefs(iconImg, titleTmp, costTmp);
+        return root;
+    }
+
+    private static TMP_Text CreateTmpText(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax,
+        Vector2 anchoredPos, Vector2 sizeDelta, float fontSize, TextAlignmentOptions align)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.pivot = anchorMin;
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = sizeDelta;
+        TMP_Text tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.fontSize = fontSize;
+        tmp.alignment = align;
+        tmp.color = Color.white;
+        if (TMP_Settings.defaultFontAsset != null)
+            tmp.font = TMP_Settings.defaultFontAsset;
+        return tmp;
+    }
+
+    public RectTransform GetReturnDropZone() => returnDropZone;
+
+    public void ShowUnitInfoForOffer(int offerIndex)
+    {
+        if (unitInfoPanel == null) return;
+        if (!TryGetOffer(offerIndex, out DeploymentOfferEntry entry)) return;
+        unitInfoPanel.Show(entry);
+    }
+
+    public void HideUnitInfoPanel()
+    {
+        if (unitInfoPanel != null)
+            unitInfoPanel.Hide();
+    }
+
+    public Unit DeployedAt(Vector2Int cell)
+    {
+        foreach(var pair in deployed)
+            if(pair.Key && pair.Key.currentGridPosition==cell) return pair.Key;
+        return null;
+    }
+
+    public int GetPointsRemaining() => pointsRemaining;
+
+    public bool TryGetOffer(int index, out DeploymentOfferEntry entry)
+    {
+        entry = null;
+        if (offers == null || index < 0 || index >= offers.Count) return false;
+        entry = offers[index];
+        return entry != null && entry.unitPrefab != null;
+    }
+
+    public bool IsCellInDeploymentZone(Vector2Int cell)
+    {
+        if (Sectors) return OsowiecDeploymentSectors.IndexOf(cell)>=0;
+        return cell.x >= deploymentZoneMin.x && cell.x <= deploymentZoneMax.x &&
+               cell.y >= deploymentZoneMin.y && cell.y <= deploymentZoneMax.y;
+    }
+
+    public string PlacementIssue(int offerIndex,Vector2Int cell,bool replace)
+        => ValidatePlacement(offerIndex,cell,replace,out _,out _);
+
+    string ValidatePlacement(int offerIndex,Vector2Int cell,bool replace,out Unit previous,out DeploymentRecord record)
+    {
+        previous=null; record=default;
+        if (!TryGetOffer(offerIndex,out var offer) || !ChessGrid.Instance || !ChessGrid.Instance.IsValidCoord(cell.x,cell.y) || !IsCellInDeploymentZone(cell))
+            return "Выберите следы на настиле";
+        if (replace && Sectors)
+            foreach (var pair in deployed)
+                if (pair.Key && pair.Key.currentGridPosition==cell) { previous=pair.Key; record=pair.Value; break; }
+        if (!previous && IsGridCellOccupied(cell)) return "Позиция занята · ПКМ снять, Shift заменить";
+        if (Mathf.Max(0,offer.costPoints)>pointsRemaining+record.Cost) return "Недостаточно снабжения";
+        int copies=spawnedPerOffer[offerIndex]-(previous && record.OfferIndex==offerIndex ? 1 : 0);
+        if (offer.maxCopies>=0 && copies>=offer.maxCopies) return "Лимит этой роли исчерпан";
+        return "";
+    }
+
+    public bool TryPlaceOfferAtGridCell(int offerIndex, Vector2Int cell, bool replace = false)
+    {
+        if (!GameManager.Instance || !GameManager.Instance.IsArmyDeploymentPhase() || !CameraManager.Instance) return false;
+        if (ValidatePlacement(offerIndex,cell,replace,out var previous,out var previousRecord).Length>0) return false;
+        var offer=offers[offerIndex];
+        int cost=Mathf.Max(0, offer.costPoints);
+        Vector3 world = ChessGrid.Instance.GridToWorldPosition(cell.x, cell.y);
+        Quaternion rot = Quaternion.Euler(0f, deploymentSpawnYawDegrees, 0f);
+        GameObject inst = Instantiate(offer.unitPrefab, world, rot);
+        Unit unit = inst.GetComponent<Unit>();
+        if (unit == null)
+        {
+            Destroy(inst);
+            return false;
+        }
+
+        unit.owner = Player.Player1;
+        unit.currentGridPosition = cell;
+        unit.SnapToGrid();
+
+        if (previous)
+        {
+            deployed.Remove(previous);
+            previous.gameObject.SetActive(false);
+            Destroy(previous.gameObject);
+            spawnedPerOffer[previousRecord.OfferIndex]--;
+            pointsRemaining+=previousRecord.Cost;
+        }
+        pointsRemaining -= cost;
+        if (spawnedPerOffer != null && offerIndex >= 0 && offerIndex < spawnedPerOffer.Length)
+            spawnedPerOffer[offerIndex]++;
+
+        var marker = inst.AddComponent<DeploymentPlacedUnitMarker>();
+        marker.Initialize(this);
+
+        deployed[unit] = new DeploymentRecord { OfferIndex = offerIndex, Cost = cost };
+        Sectors?.RefreshPositions();
+        if (gameObject.scene.name == "Osowiec") AudioManager.Instance?.PlayUnitSelect();
+
+        RefreshBudgetLabel();
+        UpdateConfirmButtonState();
+        return true;
+    }
+
+    public void RemoveDeployedUnit(Unit unit)
+    {
+        if (unit == null || GameManager.Instance == null || !GameManager.Instance.IsArmyDeploymentPhase()) return;
+        if (!deployed.TryGetValue(unit, out DeploymentRecord rec)) return;
+
+        pointsRemaining += rec.Cost;
+        if (spawnedPerOffer != null && rec.OfferIndex >= 0 && rec.OfferIndex < spawnedPerOffer.Length)
+            spawnedPerOffer[rec.OfferIndex] = Mathf.Max(0, spawnedPerOffer[rec.OfferIndex] - 1);
+
+        deployed.Remove(unit);
+        unit.gameObject.SetActive(false);
+        Destroy(unit.gameObject);
+        Sectors?.RefreshPositions();
+        if (gameObject.scene.name == "Osowiec") AudioManager.Instance?.PlayButtonClick();
+
+        RefreshBudgetLabel();
+        UpdateConfirmButtonState();
+    }
+
+    public bool IsGridCellOccupied(Vector2Int cell)
+    {
+        Unit[] all = FindObjectsByType<Unit>(FindObjectsInactive.Exclude);
+        foreach (var u in all)
+        {
+            if (u == null || u.GetHealth() <= 0) continue;
+            if (ChessGrid.Instance == null) continue;
+            Vector2Int gp = ChessGrid.Instance.WorldToGridCoords(u.transform.position);
+            if (gp == cell) return true;
+        }
+        return false;
+    }
+
+    /// <summary> Луч из тактической камеры в мировую точку на плоскости поля → клетка сетки. </summary>
+    public static bool TryScreenPointToGridCell(Vector2 screenPosition, out Vector2Int cell)
+    {
+        cell = default;
+        if (ChessGrid.Instance == null || CameraManager.Instance == null) return false;
+        Camera cam = CameraManager.Instance.GetTacticalCamera();
+        if (cam == null) return false;
+
+        Ray ray = cam.ScreenPointToRay(screenPosition);
+        float planeY = ChessGrid.Instance.GridOrigin.y;
+        if (Mathf.Abs(ray.direction.y) < 1e-5f) return false;
+        float t = (planeY - ray.origin.y) / ray.direction.y;
+        if (t < 0f) return false;
+
+        Vector3 hit = ray.origin + ray.direction * t;
+        cell = ChessGrid.Instance.WorldToGridCoords(hit);
+        return ChessGrid.Instance.IsValidCoord(cell.x, cell.y);
+    }
+
+    private void RefreshBudgetLabel()
+    {
+        ApplyReadOnlySlider(budgetSlider, pointsRemaining, armyPointBudget);
+    }
+
+    private void UpdateConfirmButtonState()
+    {
+        if (confirmButton == null) return;
+        bool ok = ValidateDeploymentRequirements(out string hint);
+        confirmButton.interactable = ok;
+        if (confirmHintText != null)
+            confirmHintText.text = hint;
+    }
+
+    private bool ValidateDeploymentRequirements(out string hint)
+    {
+        hint = "";
+
+        if (requireDeployedInfantry)
+        {
+            bool hasInfantry = false;
+            foreach (Unit unit in deployed.Keys)
+            {
+                if (unit == null || unit.IsTankUnit || unit.GetHealth() <= 0) continue;
+                hasInfantry = true;
+                break;
+            }
+
+            if (!hasInfantry)
+            {
+                hint = "Поставьте бойца для взлома терминала.";
+                return false;
+            }
+        }
+
+        Unit[] all = FindObjectsByType<Unit>(FindObjectsInactive.Exclude);
+        int p1 = 0;
+        int kings = 0;
+        foreach (var u in all)
+        {
+            if (u == null || u.GetHealth() <= 0) continue;
+            if (u.owner != Player.Player1) continue;
+            p1++;
+            if (u.chessType == ChessUnitType.King)
+                kings++;
+        }
+
+        if (requireAtLeastOneUnit && p1 < 1)
+        {
+            hint = "Поставьте хотя бы одного юнита.";
+            return false;
+        }
+
+        if (requireExactlyOneKing && kings != 1)
+        {
+            hint = kings == 0 ? "Нужен ровно один король." : "Допускается только один король.";
+            return false;
+        }
+
+        hint = "Нажмите, чтобы начать бой.";
+        return true;
+    }
+
+    private void OnConfirmClicked()
+    {
+        if (GameManager.Instance == null) return;
+        if (!ValidateDeploymentRequirements(out _)) return;
+
+        DestroyDeploymentZoneVisual();
+        Sectors?.Finish();
+
+        if (deploymentRoot != null)
+            deploymentRoot.SetActive(false);
+
+        foreach (Unit u in deployed.Keys)
+        {
+            if (u == null) continue;
+            if (u.TryGetComponent(out DeploymentPlacedUnitMarker m))
+                m.enabled = false;
+        }
+
+        // Плавно "опускаем" камеру после завершения деплоя.
+        if (CameraManager.Instance != null)
+            CameraManager.Instance.ExitArmyDeploymentCamera();
+
+        GameManager.Instance.CompleteArmyDeploymentPhase();
+    }
+
+    private void BuildDeploymentZoneVisual()
+    {
+        if (!showDeploymentZoneOverlay || ChessGrid.Instance == null)
+            return;
+
+        DestroyDeploymentZoneVisual();
+
+        deploymentZoneVisualRoot = new GameObject("DeploymentZoneVisual");
+        deploymentZoneVisualRoot.transform.SetParent(transform, false);
+
+        float cell = ChessGrid.Instance.cellSize;
+        float y = ChessGrid.Instance.GridOrigin.y + deploymentZoneYOffset;
+        // Стандартный Plane Unity — 10×10 в локальных единицах, лежит в XZ, нормаль вверх.
+        float scaleXZ = (cell / 10f) * 0.96f;
+
+        deploymentZoneSharedMaterial = CreateDeploymentZoneTileMaterial(deploymentZoneColor);
+        Material mat = deploymentZoneSharedMaterial;
+
+        for (int gx = deploymentZoneMin.x; gx <= deploymentZoneMax.x; gx++)
+        {
+            for (int gy = deploymentZoneMin.y; gy <= deploymentZoneMax.y; gy++)
+            {
+                if (!ChessGrid.Instance.IsValidCoord(gx, gy))
+                    continue;
+
+                Vector3 center = ChessGrid.Instance.GridToWorldPosition(gx, gy);
+                center.y = y;
+
+                GameObject tile = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                tile.name = $"DeployZone_{gx}_{gy}";
+                tile.transform.SetParent(deploymentZoneVisualRoot.transform, false);
+                tile.transform.position = center;
+                tile.transform.localScale = new Vector3(scaleXZ, 1f, scaleXZ);
+
+                Collider col = tile.GetComponent<Collider>();
+                if (col != null)
+                    Destroy(col);
+
+                MeshRenderer mr = tile.GetComponent<MeshRenderer>();
+                if (mr != null)
+                    mr.sharedMaterial = mat;
+            }
+        }
+    }
+
+    private static Material CreateDeploymentZoneTileMaterial(Color tint)
+    {
+        Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+        if (sh == null)
+            sh = Shader.Find("Unlit/Color");
+        if (sh == null)
+            sh = Shader.Find("Sprites/Default");
+
+        Material mat = new Material(sh);
+        if (mat.HasProperty("_BaseColor"))
+            mat.SetColor("_BaseColor", tint);
+        else if (mat.HasProperty("_Color"))
+            mat.color = tint;
+        mat.renderQueue = 3000;
+
+        // Прозрачность для URP Unlit
+        if (mat.HasProperty("_Surface"))
+        {
+            mat.SetFloat("_Surface", 1f); // transparent
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+
+        return mat;
+    }
+
+    private void DestroyDeploymentZoneVisual()
+    {
+        if (deploymentZoneVisualRoot != null)
+        {
+            Destroy(deploymentZoneVisualRoot);
+            deploymentZoneVisualRoot = null;
+        }
+
+        if (deploymentZoneSharedMaterial != null)
+        {
+            Destroy(deploymentZoneSharedMaterial);
+            deploymentZoneSharedMaterial = null;
+        }
+    }
+
+    private void EnsureEventSystemExists()
+    {
+        if (FindAnyObjectByType<EventSystem>() != null) return;
+        GameObject es = new GameObject("EventSystem");
+        es.AddComponent<EventSystem>();
+        es.AddComponent<InputSystemUIInputModule>();
+    }
+
+    /// <summary>Создаёт Overlay Canvas с нижней полосой для карточек, текстом бюджета и кнопкой «Готов».</summary>
+    private void BuildMinimalDeploymentUi()
+    {
+        GameObject canvasGo = new GameObject("ArmyDeploymentCanvas");
+        canvasGo.transform.SetParent(transform, false);
+
+        Canvas canvas = canvasGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 500;
+        canvasGo.AddComponent<GraphicRaycaster>();
+
+        deploymentRoot = canvasGo;
+
+        // Сначала подложка «зоны возврата», затем рука с карточками — в uGUI последний sibling рисуется сверху
+        // и получает raycast. Иначе ReturnDropZone перекрывала карточки и drag не начинался.
+        {
+            GameObject ret = new GameObject("ReturnDropZone");
+            ret.transform.SetParent(canvasGo.transform, false);
+            RectTransform rr = ret.AddComponent<RectTransform>();
+            rr.anchorMin = new Vector2(0.04f, 0.02f);
+            rr.anchorMax = new Vector2(0.72f, 0.30f);
+            rr.offsetMin = Vector2.zero;
+            rr.offsetMax = Vector2.zero;
+            Image rim = ret.AddComponent<Image>();
+            rim.color = new Color(0.2f, 0.25f, 0.35f, 0.25f);
+            // Логика «отпустил в зоне отмены» — RectangleContainsScreenPoint в DeploymentCardUI; raycast не нужен.
+            rim.raycastTarget = false;
+            returnDropZone = rr;
+        }
+
+        {
+            GameObject hand = new GameObject("CardHand");
+            hand.transform.SetParent(canvasGo.transform, false);
+            RectTransform handRt = hand.AddComponent<RectTransform>();
+            handRt.anchorMin = new Vector2(0.04f, 0.02f);
+            handRt.anchorMax = new Vector2(0.72f, 0.26f);
+            handRt.offsetMin = Vector2.zero;
+            handRt.offsetMax = Vector2.zero;
+            var hlg = hand.AddComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 10f;
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.childControlWidth = false;
+            hlg.childControlHeight = false;
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = false;
+            cardHandContainer = hand.transform;
+        }
+
+        {
+            GameObject budgetGo = new GameObject("BudgetSlider");
+            budgetGo.transform.SetParent(canvasGo.transform, false);
+            RectTransform br = budgetGo.AddComponent<RectTransform>();
+            br.anchorMin = new Vector2(0.04f, 0.78f);
+            br.anchorMax = new Vector2(0.5f, 0.94f);
+            br.offsetMin = Vector2.zero;
+            br.offsetMax = Vector2.zero;
+            budgetSlider = CreateReadOnlySlider(budgetGo.transform, new Color(0.25f, 0.9f, 0.5f, 1f));
+        }
+
+        {
+            GameObject hintGo = new GameObject("ConfirmHint");
+            hintGo.transform.SetParent(canvasGo.transform, false);
+            RectTransform hr = hintGo.AddComponent<RectTransform>();
+            hr.anchorMin = new Vector2(0.35f, 0.30f);
+            hr.anchorMax = new Vector2(0.65f, 0.38f);
+            hr.offsetMin = Vector2.zero;
+            hr.offsetMax = Vector2.zero;
+            confirmHintText = hintGo.AddComponent<TextMeshProUGUI>();
+            confirmHintText.fontSize = 15;
+            confirmHintText.alignment = TextAlignmentOptions.Center;
+            confirmHintText.color = new Color(1f, 0.85f, 0.6f);
+            if (TMP_Settings.defaultFontAsset != null)
+                confirmHintText.font = TMP_Settings.defaultFontAsset;
+        }
+
+        {
+            GameObject btnGo = new GameObject("ConfirmDeploymentButton");
+            btnGo.transform.SetParent(canvasGo.transform, false);
+            RectTransform brt = btnGo.AddComponent<RectTransform>();
+            brt.anchorMin = new Vector2(0.38f, 0.18f);
+            brt.anchorMax = new Vector2(0.62f, 0.26f);
+            brt.offsetMin = Vector2.zero;
+            brt.offsetMax = Vector2.zero;
+            Image img = btnGo.AddComponent<Image>();
+            img.color = new Color(0.15f, 0.45f, 0.22f, 1f);
+            confirmButton = btnGo.AddComponent<Button>();
+
+            GameObject labelGo = new GameObject("Label");
+            labelGo.transform.SetParent(btnGo.transform, false);
+            RectTransform lr = labelGo.AddComponent<RectTransform>();
+            lr.anchorMin = Vector2.zero;
+            lr.anchorMax = Vector2.one;
+            lr.offsetMin = Vector2.zero;
+            lr.offsetMax = Vector2.zero;
+            TMP_Text lbl = labelGo.AddComponent<TextMeshProUGUI>();
+            lbl.text = "Готов — начать бой";
+            lbl.fontSize = 18;
+            lbl.alignment = TextAlignmentOptions.Center;
+            lbl.color = Color.white;
+            if (TMP_Settings.defaultFontAsset != null)
+                lbl.font = TMP_Settings.defaultFontAsset;
+        }
+
+        BuildDeploymentUnitInfoPanel(canvasGo.transform);
+    }
+
+    private void BuildDeploymentUnitInfoPanel(Transform canvasTransform)
+    {
+        GameObject panelGo = new GameObject("DeploymentUnitInfoPanel");
+        panelGo.transform.SetParent(canvasTransform, false);
+        RectTransform panelRt = panelGo.AddComponent<RectTransform>();
+        panelRt.anchorMin = new Vector2(0.74f, 0.12f);
+        panelRt.anchorMax = new Vector2(0.98f, 0.88f);
+        panelRt.offsetMin = Vector2.zero;
+        panelRt.offsetMax = Vector2.zero;
+
+        Image bg = panelGo.AddComponent<Image>();
+        bg.color = new Color(0.04f, 0.06f, 0.1f, 0.92f);
+        bg.raycastTarget = false;
+        if (defaultUnitInfoPanelSprite != null)
+        {
+            bg.sprite = defaultUnitInfoPanelSprite;
+            bg.color = Color.white;
+        }
+
+        GameObject statsBox = new GameObject("StatsTextBlock");
+        statsBox.transform.SetParent(panelGo.transform, false);
+        RectTransform statsRt = statsBox.AddComponent<RectTransform>();
+        statsRt.anchorMin = new Vector2(0.08f, 0.64f);
+        statsRt.anchorMax = new Vector2(0.55f, 0.82f);
+        statsRt.offsetMin = Vector2.zero;
+        statsRt.offsetMax = Vector2.zero;
+
+        TMP_Text damageTmp = CreateTmpText(statsBox.transform, "DamageValue",
+            new Vector2(0f, 0.52f), new Vector2(1f, 1f),
+            Vector2.zero, Vector2.zero, 26f, TextAlignmentOptions.TopLeft);
+        damageTmp.fontStyle = FontStyles.Bold;
+
+        TMP_Text healthTmp = CreateTmpText(statsBox.transform, "HealthValue",
+            new Vector2(0f, 0f), new Vector2(1f, 0.48f),
+            Vector2.zero, Vector2.zero, 26f, TextAlignmentOptions.TopLeft);
+        healthTmp.fontStyle = FontStyles.Bold;
+
+        GameObject abilityBox = new GameObject("AbilityTextBlock");
+        abilityBox.transform.SetParent(panelGo.transform, false);
+        RectTransform abilityRt = abilityBox.AddComponent<RectTransform>();
+        abilityRt.anchorMin = new Vector2(0.08f, 0.38f);
+        abilityRt.anchorMax = new Vector2(0.92f, 0.62f);
+        abilityRt.offsetMin = Vector2.zero;
+        abilityRt.offsetMax = Vector2.zero;
+
+        TMP_Text nameTmp = CreateTmpText(abilityBox.transform, "AbilityName",
+            new Vector2(0f, 1f), new Vector2(1f, 1f),
+            new Vector2(0, -4), new Vector2(0, 28), 22f, TextAlignmentOptions.TopLeft);
+        nameTmp.fontStyle = FontStyles.Bold;
+        nameTmp.color = new Color(0.35f, 0.95f, 1f);
+
+        TMP_Text descTmp = CreateTmpText(abilityBox.transform, "AbilityDescription",
+            new Vector2(0f, 0.35f), new Vector2(1f, 0.85f),
+            Vector2.zero, Vector2.zero, 13f, TextAlignmentOptions.TopLeft);
+        descTmp.textWrappingMode = TextWrappingModes.Normal;
+        descTmp.color = new Color(0.75f, 0.85f, 0.9f);
+
+        TMP_Text cdTmp = CreateTmpText(abilityBox.transform, "AbilityCooldown",
+            new Vector2(0f, 0f), new Vector2(1f, 0.28f),
+            Vector2.zero, Vector2.zero, 12f, TextAlignmentOptions.BottomLeft);
+        cdTmp.color = new Color(0.5f, 0.65f, 0.75f);
+
+        panelGo.SetActive(false);
+
+        var panel = panelGo.AddComponent<DeploymentUnitInfoPanelUI>();
+        panel.ConfigureRuntime(panelGo, bg, damageTmp, healthTmp, nameTmp, descTmp, cdTmp, defaultUnitInfoPanelSprite);
+        unitInfoPanel = panel;
+    }
+
+    private static void ApplyReadOnlySlider(Slider slider, int current, int max)
+    {
+        if (slider == null) return;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.wholeNumbers = false;
+        slider.interactable = false;
+        slider.value = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
+    }
+
+    private static Slider CreateReadOnlySlider(Transform parent, Color fillColor)
+    {
+        return CreateReadOnlySlider(parent, Vector2.zero, Vector2.one, fillColor);
+    }
+
+    private static Slider CreateReadOnlySlider(Transform parent, Vector2 anchorMin, Vector2 anchorMax, Color fillColor)
+    {
+        var root = new GameObject("Slider");
+        root.transform.SetParent(parent, false);
+        var rootRt = root.AddComponent<RectTransform>();
+        rootRt.anchorMin = anchorMin;
+        rootRt.anchorMax = anchorMax;
+        rootRt.offsetMin = Vector2.zero;
+        rootRt.offsetMax = Vector2.zero;
+
+        var slider = root.AddComponent<Slider>();
+        slider.transition = Selectable.Transition.None;
+        slider.interactable = false;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+
+        var bgGo = new GameObject("Background");
+        bgGo.transform.SetParent(root.transform, false);
+        var bgRt = bgGo.AddComponent<RectTransform>();
+        StretchUiRect(bgRt);
+        var bgImg = bgGo.AddComponent<Image>();
+        bgImg.color = new Color(0.05f, 0.05f, 0.08f, 0.95f);
+        slider.targetGraphic = bgImg;
+
+        var fillAreaGo = new GameObject("Fill Area");
+        fillAreaGo.transform.SetParent(root.transform, false);
+        var fillAreaRt = fillAreaGo.AddComponent<RectTransform>();
+        StretchUiRect(fillAreaRt);
+        fillAreaRt.offsetMin = new Vector2(4f, 4f);
+        fillAreaRt.offsetMax = new Vector2(-4f, -4f);
+
+        var fillGo = new GameObject("Fill");
+        fillGo.transform.SetParent(fillAreaGo.transform, false);
+        var fillRt = fillGo.AddComponent<RectTransform>();
+        StretchUiRect(fillRt);
+        var fillImg = fillGo.AddComponent<Image>();
+        fillImg.color = fillColor;
+
+        slider.fillRect = fillRt;
+        slider.direction = Slider.Direction.LeftToRight;
+        return slider;
+    }
+
+    private static void StretchUiRect(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+    }
+}
+
+[System.Serializable]
+public class DeploymentOfferEntry
+{
+    public GameObject unitPrefab;
+    [Min(0)] public int costPoints = 1;
+    [Tooltip("-1 = без лимита копий за партию")]
+    public int maxCopies = -1;
+    [Tooltip("Опционально: свой спрайт панели для этого типа (иначе default на ArmyDeploymentController).")]
+    public Sprite infoPanelSprite;
+}
