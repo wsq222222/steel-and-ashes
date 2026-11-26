@@ -150,13 +150,15 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         yield return Deploy(0);
         var foot=actor.transform.position;
         bool marchLeap=OsowiecMarch.Free(actor);
+        float paidBefore=actor.FieldTurn.Breath(1000f)*1000f;
         float beforeLeap=actor.GetRemainingMoveMeters();
         yield return KeyTap(Key.Q);
         yield return new WaitForSeconds(.8f);
         float travelled=Vector3.ProjectOnPlane(actor.transform.position-foot,Vector3.up).magnitude;
         float cost=beforeLeap-actor.GetRemainingMoveMeters();
-        Check(travelled>.7f && (marchLeap && OsowiecMarch.Free(actor) ? Mathf.Abs(cost)<.25f : Mathf.Abs(cost-travelled)<.25f),
-            "Hammer moves the capsule with the active movement budget, travel "+travelled.ToString("F2")+" / cost "+cost.ToString("F2")+" m, march "+marchLeap);
+        float paid=actor.FieldTurn.Breath(1000f)*1000f-paidBefore;
+        Check(travelled>.7f && paid<=travelled+.25f && Mathf.Abs(cost-paid)<.25f && (marchLeap || Mathf.Abs(cost-travelled)<.25f),
+            "Hammer moves the capsule and spends only the combat part of the jump, travel "+travelled.ToString("F2")+" / cost "+cost.ToString("F2")+" / charged movement "+paid.ToString("F2")+" m");
         yield return Deploy(0);
         Move(target,actor.transform.position+actor.transform.forward*1.35f,-actor.transform.forward);
         yield return null; Physics.SyncTransforms();
@@ -272,13 +274,27 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         yield return Capture(prefix+"-impact");
         Check(OsowiecFieldKit.Remaining(actor,item)==0 && actor.GetEquippedWeapon().AmmoInMag==ammo,"single charge spent, rifle ammunition preserved");
     }
+    static bool HasPixels(Texture2D image)
+    {
+        if(!image) return false;
+        float light=0,dark=1;
+        for(int x=1;x<10;x++)
+        for(int y=1;y<8;y++)
+        {
+            float value=image.GetPixel(image.width*x/10,image.height*y/8).grayscale;
+            light=Mathf.Max(light,value); dark=Mathf.Min(dark,value);
+        }
+        return light-dark>=.08f;
+    }
+
     IEnumerator Capture(string name)
     {
         if(!pictures) yield break;
         yield return new WaitForEndOfFrame();
         var image=ScreenCapture.CaptureScreenshotAsTexture();
-        if(!image)
+        if(!HasPixels(image))
         {
+            if(image) Destroy(image);
             // Hidden Windows players can lack a swap chain. Render the active FPS camera offscreen.
             var active=RenderTexture.active;
             var previous=eye.targetTexture;
@@ -302,14 +318,7 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         }
         try
         {
-            float light=0,dark=1;
-            for(int x=1;x<10;x++)
-            for(int y=1;y<8;y++)
-            {
-                float value=image.GetPixel(image.width*x/10,image.height*y/8).grayscale;
-                light=Mathf.Max(light,value); dark=Mathf.Min(dark,value);
-            }
-            if(light-dark<.08f) throw new InvalidOperationException("Empty graphical player frame: "+name);
+            if(!HasPixels(image)) throw new InvalidOperationException("Empty graphical player frame: "+name);
             File.WriteAllBytes(Path.Combine(output,name+".png"),image.EncodeToPNG());
         }
         finally { Destroy(image); }
