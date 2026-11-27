@@ -75,7 +75,9 @@ Varyings GroundVertex(SoilVertex s)
 {
     Varyings o;
     o.normal=normalize(s.normal);
-    s.world.y+=UntrackedHeight(s.world.xz,o.normal.y)+MarkHeight(s.world.xz);
+    float2 a=abs(s.world.xz-float2(-4,13)),b=abs(s.world.xz-float2(11,11));
+    float rimDistance=min(abs(max(a.x,a.y)-2),abs(max(b.x,b.y)-2));
+    s.world.y+=smoothstep(.012,.12,rimDistance)*(UntrackedHeight(s.world.xz,o.normal.y)+MarkHeight(s.world.xz));
     o.positionWS=s.world;
     #if defined(SOIL_SHADOW)
         #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)

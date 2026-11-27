@@ -74,6 +74,8 @@ public sealed class OsowiecEnvironmentAudio : MonoBehaviour
 
     public void PlayCapture() => signal.PlayOneShot(OsowiecSoundBank.Clip("Capture"), OsowiecFieldSettings.InterfaceGain * .72f);
 
+    public void PlayReinforcement() => signal.PlayOneShot(OsowiecSoundBank.Clip("ReinforcementBugle"),OsowiecFieldSettings.InterfaceGain*.81f);
+
     public void PlayWarning(Vector3 position)
     {
         score.DuckWarning();

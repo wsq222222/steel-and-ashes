@@ -171,7 +171,7 @@ public class ActionModeUI : MonoBehaviour
             integrityText = integrityPanel.GetComponentInChildren<TextMeshProUGUI>(true);
     }
     
-    void Update()
+    void LateUpdate()
     {
         if (GameManager.Instance != null && GameManager.Instance.IsPaused())
             return;
@@ -182,6 +182,7 @@ public class ActionModeUI : MonoBehaviour
                 actionCamera = CameraManager.Instance.GetActionCamera();
             
             IdentifyCrosshairTarget(out var targetUnit, out var damageableTarget);
+            SightUnit=targetUnit;
             UpdateCrosshair(targetUnit, damageableTarget);
             
             if (Time.time - lastUpdateTime >= updateInterval || currentTarget != targetUnit ||
@@ -200,11 +201,15 @@ public class ActionModeUI : MonoBehaviour
         }
     }
     
+    internal Unit SightUnit {get;private set;}
+    internal bool ShowsCenterDot => crosshairImage && crosshairImage.gameObject.activeInHierarchy;
+
     private void UpdateCrosshair(Unit targetUnit, IDamageableTarget damageableTarget)
     {
         if (crosshairImage == null || actionCamera == null) return;
         
-        if(OsowiecFieldKit.WheelOpen || OsowiecFieldKit.ScopeOpen)
+        if(OsowiecFieldKit.WheelOpen || OsowiecFieldKit.ScopeOpen ||
+            OsowiecFieldKit.RifleSight(CameraManager.Instance.GetCurrentControlledUnit()))
         {
             if(crosshairImage.gameObject.activeSelf) crosshairImage.gameObject.SetActive(false);
             return;
@@ -394,16 +399,20 @@ public class ActionModeUI : MonoBehaviour
         damageable = null;
         if (!actionCamera || OsowiecFieldKit.WheelOpen || OsowiecFieldKit.ScopeOpen) return;
         Ray ray = actionCamera.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f, 0f));
-        if (!Physics.Raycast(ray, out var hit, raycastDistance)) return;
-        var candidate = hit.collider.GetComponentInParent<Unit>();
-        if (OsowiecOperation.Instance)
+        if(OsowiecOperation.Instance && OsowiecFieldKit.Instance)
         {
-            if (OsowiecFieldKit.Obscured(ray.origin, hit.point)) return;
-            var observer = CameraManager.Instance.GetCurrentControlledUnit();
-            if (candidate && observer && OsowiecFieldKit.Obscured(observer.transform.position + Vector3.up,
-                candidate.transform.position + Vector3.up)) return;
+            unit=OsowiecFieldKit.Instance.SightedEnemy;
+            if(unit)return;
+            // An enemy behind opaque gas must not leak through the generic target interface.
+            if(!Physics.Raycast(ray,out var fieldHit,raycastDistance) ||
+               OsowiecFieldKit.PlayerSightAir(ray.origin,fieldHit.point)!=OsowiecSightState.Empty)return;
+            var other=fieldHit.collider.GetComponentInParent<Unit>();
+            var observer=CameraManager.Instance.GetCurrentControlledUnit();
+            if(other){if(observer && other!=observer && other.owner==observer.owner)unit=other;return;}
+            damageable=FindDamageableInParents(fieldHit.collider);return;
         }
-        unit = candidate;
+        if(!Physics.Raycast(ray,out var hit,raycastDistance))return;
+        unit=hit.collider.GetComponentInParent<Unit>();
         if (!unit) damageable = FindDamageableInParents(hit.collider);
     }
 

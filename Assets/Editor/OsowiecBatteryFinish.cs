@@ -71,7 +71,13 @@ public static class OsowiecBatteryFinish
                 float roll=Mathf.Clamp01((1-Mathf.Pow(Mathf.Abs(u),2.6f))*(1-end));
                 y=vault+.10f+roll*(.44f+.24f*Mathf.Sin(3*u+v+seed)+.14f*Mathf.Cos(6*v-2*u+seed)+.32f*variation-.12f*channels);
             }
-            y+=.034f*(Noise(16*u,15*v,seed+23)-.5f);
+            // The toe stays against the masonry. Uneven clods accumulate in the
+            // middle while narrow washouts carve down the outside shoulder.
+            float envelope=Mathf.SmoothStep(0,1,(1-Mathf.Max(Mathf.Abs(u),Mathf.Abs(v)))*4.8f);
+            float hummock=Noise(2.3f*u+.54f*Mathf.Sin(v*4),3.3f*v,seed+16);
+            float erosion=1-Mathf.SmoothStep(0,1,Mathf.Abs(v+.16f*Mathf.Sin(4*u+seed)-.28f)*7);
+            y+=envelope*(.51f*hummock+.19f*Noise(8*u,6*v,seed+11)-.19f*erosion)
+                +.048f*(Noise(16*u,15*v,seed+23)-.5f);
             return origin+side*x+forward*z+Up*y;
         }
         float Bare(float u,float v)
@@ -128,7 +134,7 @@ public static class OsowiecBatteryFinish
         var mats=new List<Material>();
         for(int i=0;i<originals.Length;i++)
         {
-            if(originals[i].name=="Sod" || originals[i].name=="Earth")continue;
+            if(originals[i].name is "Sod" or "Earth" or "Casemate sod and scoured peat" or "Battery wet cut peat" or "Sedge")continue;
             slots.Add(new CombineInstance{mesh=baseline,subMeshIndex=i});mats.Add(originals[i]);
         }
         var outer=r.sharedMaterials;
@@ -136,8 +142,12 @@ public static class OsowiecBatteryFinish
         string path=Art+r.name+" finished.asset";
         var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
         if(!mesh){mesh=new Mesh{name=r.name+" finished"};AssetDatabase.CreateAsset(mesh,path);}
-        mesh.Clear();mesh.indexFormat=IndexFormat.UInt32;
-        mesh.CombineMeshes(slots.ToArray(),false,false);
+        // A repeated dressing pass can use the existing finished mesh as its
+        // baseline. Combine into a separate mesh before updating that asset.
+        var result=new Mesh{name=r.name+" finished",indexFormat=IndexFormat.UInt32};
+        result.CombineMeshes(slots.ToArray(),false,false);
+        EditorUtility.CopySerialized(result,mesh);
+        UnityEngine.Object.DestroyImmediate(result);
         filter.sharedMesh=mesh;r.sharedMaterials=mats.ToArray();
         EditorUtility.SetDirty(mesh);EditorUtility.SetDirty(filter);EditorUtility.SetDirty(r);
     }
@@ -254,18 +264,35 @@ public static class OsowiecBatteryFinish
         var geo=new Geometry(3);
         var rng=new System.Random(96321);
         float Rand()=>(float)rng.NextDouble();
-        int count=0;
+        int count=0, contacts=0;
+        var bed=new List<(Vector3 a,Vector3 b,Vector3 c)>();
+        float BedTop(Vector3 point)
+        {
+            float top=float.NegativeInfinity;
+            foreach(var (a,b,c) in bed)
+            {
+                float det=(b.z-c.z)*(a.x-c.x)+(c.x-b.x)*(a.z-c.z);
+                if(Mathf.Abs(det)<1e-8f)continue;
+                float u=((b.z-c.z)*(point.x-c.x)+(c.x-b.x)*(point.z-c.z))/det;
+                float v=((c.z-a.z)*(point.x-c.x)+(a.x-c.x)*(point.z-c.z))/det;
+                if(u>=-1e-5f && v>=-1e-5f && u+v<=1.00001f)
+                    top=Mathf.Max(top,u*a.y+v*b.y+(1-u-v)*c.y);
+            }
+            if(float.IsNegativeInfinity(top))throw new InvalidOperationException("Sack has no support at "+point);
+            return top;
+        }
         foreach(var group in new[]{(-18f,7f,2.4f),(6f,16f,-.14f),(16f,9f,1.21f),(28f,5f,-.29f),(37f,3f,.81f),(20f,-9f,1.92f)})
         for(int row=0;row<2;row++)for(int i=0;i<4-row;i++)
         {
-            float distance=(i-1.4f+row*.4f)*.66f;
+            if(row==0 && i==0)bed.Clear();
+            float distance=(i-1.5f+row*.5f)*.66f;
             float x=group.Item1+distance*Mathf.Cos(group.Item3),z=group.Item2+distance*Mathf.Sin(group.Item3);
             float angle=group.Item3+(Rand()-.5f)*.18f;
             var along=new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
             var side=Vector3.Cross(along,Up);
             float phase=Rand()*6.28f,length=.383f+.024f*Rand(),width=.208f+.027f*Rand(),height=.116f+.022f*Rand();
-            float y=Ground(x,z)+height-.013f+row*.213f;
-            Vector3 p=new Vector3(x,y,z);
+            Vector3 p=new Vector3(x,0,z);
+            float rise=0, slope=0, bank=0;
             float Sp(float n,float exponent)=>Mathf.Sign(n)*Mathf.Pow(Mathf.Abs(n),exponent);
             Vector3 Cloth(float along01,float phi)
             {
@@ -277,8 +304,33 @@ public static class OsowiecBatteryFinish
                 float fold=.009f*(.3f+.7f*end)*Mathf.Cos(phi*5+phase+u*7);
                 return p+along*(u*length+.012f*Mathf.Sin(phi*2+phase)*end)
                     +side*((width+gather+fold)*endShape*Sp(Mathf.Cos(phi),.66f)+.012f*Mathf.Sin(u*4+phase))
-                    +Up*((height+fold)*endShape*vy+.021f*u*Mathf.Sin(phase)+sag*endShape
+                    +Up*(rise+slope*u+bank*endShape*Sp(Mathf.Cos(phi),.66f)+(height+fold)*endShape*vy+.021f*u*Mathf.Sin(phase)+sag*endShape
                         -.016f*end+.012f*Mathf.Sin(3*u+phase)*Mathf.Max(0,vy));
+            }
+            // Seat the two load-bearing patches on the actual terrain or on opposite bags below.
+            const float contact=.25f;
+            float delta(float t) {
+                var sole=Cloth(t,-Mathf.PI*.5f);
+                return (row==0?Ground(sole.x,sole.z):BedTop(sole))-sole.y;
+            }
+            float left=delta(contact), right=delta(1-contact);
+            rise=(left+right)*.5f-.012f;
+            slope=right-left;
+            if(row==0) {
+                var l=p-side*width*.65f; var rr=p+side*width*.65f;
+                bank=(Ground(rr.x,rr.z)-Ground(l.x,l.z))/1.30f;
+            }
+            for(int end=0;end<2;end++){
+                float t=end==0?contact:1-contact;
+                if(Mathf.Abs(delta(t)-.012f)>.006f)throw new InvalidOperationException("Unsupported stitched sack at "+p);
+                contacts++;
+            }
+            if(row==0){
+                for(int k=0;k<22;k++)for(int n=0;n<14;n++){
+                    float u=k/22f,v=(k+1)/22f,a=n*Mathf.PI/14,b=(n+1)*Mathf.PI/14;
+                    var A=Cloth(u,a); var B=Cloth(v,a); var C=Cloth(v,b); var D=Cloth(u,b);
+                    bed.Add((A,B,C));bed.Add((A,C,D));
+                }
             }
             geo.Grid(0,22,28,(u,v)=>{
                 float theta=-Mathf.PI*2*v;
@@ -307,7 +359,17 @@ public static class OsowiecBatteryFinish
         }
         var jute=Tinted("Battery soaked sacking","Quartermaster linen",new Color(.86f,.78f,.63f),.18f);
         geo.Save(r,"Battery field filled sacks and sewn hems",jute,Mat("Repair flax"),Mat("Hemp ties"));
-        Debug.Log("Eastern battery artist pass: "+count+" compressed canvas sacks across six surveyed parapets.");
+        if(count!=42 || contacts!=84)throw new InvalidOperationException("Incomplete sack wall");
+        Debug.Log($"Sandbags seated: {count} cloth sacks, {contacts} verified contacts across six groups.");
+
+    }
+
+    internal static void SeatExistingSandbags()
+    {
+        var sacks=UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include,FindObjectsSortMode.None)
+            .Single(r=>r.name=="Solid_Sandbags");
+        Physics.SyncTransforms();
+        Sacks(sacks);
     }
 
     public static void Install(Transform fort,Transform root)
@@ -325,12 +387,20 @@ public static class OsowiecBatteryFinish
             r.sharedMaterials=r.sharedMaterials.Select(m=>m.name=="Earth"||m.name=="Sod"?peat:m).ToArray();
             EditorUtility.SetDirty(r);
         }
-        Cover(Find("Battery gallery roof"),true,new Vector3(46,0,1.1f),Vector3.forward,123,peat);
-        Cover(Find("Battery north pavilion roof"),false,new Vector3(32,0,9),new Vector3(Mathf.Cos(1.19f),0,Mathf.Sin(1.19f)),54,peat);
-        Cover(Find("Battery south pavilion roof"),false,new Vector3(40,0,-8),new Vector3(Mathf.Cos(2.10f),0,Mathf.Sin(2.10f)),78,peat);
+        RefreshRoofRelief(fort);
         ReturnsAndMast(Find("Fort_end_walls"),Find("Fort_crown").GetComponent<MeshFilter>(),root,peat);
         Sacks(Find("Solid_Sandbags"));
         Verify(fort);
+    }
+
+    public static void RefreshRoofRelief(Transform fort)
+    {
+        var roofs=fort.GetComponentsInChildren<MeshRenderer>(true);
+        MeshRenderer Find(string label)=>roofs.Single(r=>r.name==label);
+        var peat=Mat("Battery wet cut peat");
+        Cover(Find("Battery gallery roof"),true,new Vector3(46,0,1.1f),Vector3.forward,123,peat);
+        Cover(Find("Battery north pavilion roof"),false,new Vector3(32,0,9),new Vector3(Mathf.Cos(1.19f),0,Mathf.Sin(1.19f)),54,peat);
+        Cover(Find("Battery south pavilion roof"),false,new Vector3(40,0,-8),new Vector3(Mathf.Cos(2.10f),0,Mathf.Sin(2.10f)),78,peat);
     }
 
     public static void Verify(Transform fort)

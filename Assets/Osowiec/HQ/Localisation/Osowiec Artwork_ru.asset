@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97269afb30aa84742ae3f3342603618a, type: 3}
+  m_Name: Osowiec Artwork_ru
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.AssetTable
+  m_LocaleId:
+    m_Code: ru
+  m_SharedData: {fileID: 11400000, guid: d1d2982d95fd0db4aac53a0dfc3c9a71, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 5082439680
+    m_Localized: c21a0d020d6cc334abf6e9883a39d380
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8727289856
+    m_Localized: 39469fad8b309df45bbb43dd3dea7c12
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9511624704
+    m_Localized: 8cf0857f6be78bb43bc21a7e69b33ef2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10274988032
+    m_Localized: 48e22991c0d4dcc40909ad41298c9380
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12070702538752
+    m_Localized: 599a66f7b7c60e547adb3c195d149ca8
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

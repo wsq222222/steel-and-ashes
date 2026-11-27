@@ -45,7 +45,7 @@ public class TacticalWorldIconsController : MonoBehaviour
 
     private struct FieldIcon
     {
-        public Image Frame;
+        public UnityEngine.UI.Outline Contour;
         public RawImage Photograph;
     }
 
@@ -210,22 +210,22 @@ public class TacticalWorldIconsController : MonoBehaviour
         foreach (var image in icon.GetComponentsInChildren<Image>(true))
             image.enabled = false;
 
-        var frame = NewPlate(icon.transform, "Field frame", 0f).gameObject.AddComponent<Image>();
-        frame.raycastTarget = true;
-        var aperture = NewPlate(frame.transform, "Dark field backing", 2f).gameObject.AddComponent<Image>();
-        aperture.raycastTarget = false;
-        aperture.color = new Color(.105f, .112f, .089f);
-        var photograph = NewPlate(aperture.transform, "Unit field portrait", 1f).gameObject.AddComponent<RawImage>();
-        photograph.raycastTarget = false;
+        var photograph = NewPlate(icon.transform, "Unit field portrait", 0f).gameObject.AddComponent<RawImage>();
         photograph.texture = fieldPortraitAtlas;
+        photograph.raycastTarget = true;
+        var rect = photograph.rectTransform;
+        rect.anchorMin = new Vector2(.085f, 0);
+        rect.anchorMax = new Vector2(.915f, 1);
+        var contour = photograph.gameObject.AddComponent<UnityEngine.UI.Outline>();
+        contour.effectDistance = new Vector2(1.4f,-1.4f);
         int column = unit.chessType switch
         {
             ChessUnitType.Bishop => 1,
             ChessUnitType.Guardian => 2,
             _ => 0
         };
-        photograph.uvRect = new Rect(column / 3f + .0067f, .02f, .32f, .96f);
-        return new FieldIcon { Frame = frame, Photograph = photograph };
+        photograph.uvRect = new Rect(column / 3f, 0, 1f/3f, 1);
+        return new FieldIcon { Contour = contour, Photograph = photograph };
     }
 
     private static RectTransform NewPlate(Transform parent, string name, float margin)
@@ -244,12 +244,12 @@ public class TacticalWorldIconsController : MonoBehaviour
         bool ally = GameManager.Instance == null || unit.owner ==
             (GameManager.Instance.GetGameMode() == GameMode.PlayerVsBot ? Player.Player1 : GameManager.Instance.currentPlayer);
         bool hovered = lastHoverFromIcon == unit;
-        icon.Frame.color = ally
+        icon.Contour.effectColor = ally
             ? new Color(.78f, .66f, .41f)
             : exact ? new Color(.69f, .35f, .24f) : new Color(.43f, .37f, .30f);
         icon.Photograph.color = ally ? new Color(1f, .98f, .88f)
             : exact ? new Color(.88f, .75f, .65f) : new Color(.58f, .54f, .48f);
-        if (hovered) icon.Frame.color = Color.Lerp(icon.Frame.color, new Color(1f, .91f, .69f), .65f);
+        if (hovered) icon.Contour.effectColor = Color.Lerp(icon.Contour.effectColor, new Color(1f, .91f, .69f), .65f);
     }
 
     private void UpdateIconScreenPositions(Camera tacCam)

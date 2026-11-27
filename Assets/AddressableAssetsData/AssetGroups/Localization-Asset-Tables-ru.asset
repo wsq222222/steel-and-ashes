@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Localization-Asset-Tables-ru
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Localization-Asset-Tables-ru
+  m_GUID: c328a5307502b4d4cb8bc7d33436736d
+  m_SerializeEntries:
+  - m_GUID: e237f786faf045a4998ab49213f239fb
+    m_Address: Osowiec Artwork_ru
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ru
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 1
+  m_Settings: {fileID: 11400000, guid: 7202daaf190cd2f429d113726196b7d9, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: a665af3d4b4da844a9c4a2b6a25c1a20, type: 2}
+    - {fileID: 11400000, guid: 067afd0532d472242936c00e5241d797, type: 2}
+    - {fileID: 11400000, guid: ec4c320ceb627204987ae92f7b00cb7b, type: 2}

@@ -1223,7 +1223,7 @@ MonoBehaviour:
   combatRole: 0
   health: 100
   maxHealth: 100
-  damage: 15
+  damage: 57
   moveSpeed: 4
   gravity: -9.81
   mouseSensitivity: 0.1

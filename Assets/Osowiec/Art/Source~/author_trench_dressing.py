@@ -7,9 +7,10 @@ from collections import defaultdict
 from math import cos, sin, pi, floor, atan2
 from pathlib import Path
 import random
+import json
 
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Euler
 from mathutils.bvhtree import BVHTree
 
 
@@ -138,29 +139,97 @@ def blob(g, m, centre, radii, seed, rows=6, sides=10, angular=False, turn=0):
     batches[g].add(m,vertices,faces,not angular)
 
 
-def sack(g,centre,angle,seed):
-    # Top seam, scalloped corners and gathered ears distinguish stitched sacks from rocks.
-    x,y,z=centre; longitudinal=Vector((cos(angle),sin(angle),0)); lateral=Z.cross(longitudinal)
-    c=Vector(centre); verts=[]; faces=[]; segments=16
-    for along,w,h,drop in [(-.48,.025,.03,-.045),(-.39,.188,.115,-.018),(-.28,.211,.13,.014),
-                            (.02,.225,.153,.023),(.29,.206,.132,0),(.41,.163,.095,-.017),(.49,.027,.032,-.04)]:
+# The final Unity bank is subdivided and eroded after importing the fort survey.
+# ExportSackSupports in OsowiecBriefingSurvey saves just the receiver triangles here.
+patch_file = source / "trench_sack_supports.json"
+points = json.loads(patch_file.read_text(encoding="utf-8-sig"))["triangles"]
+patch_points = [(p["x"], p["z"], p["y"]) for p in points]
+bank_tree = BVHTree.FromPolygons(patch_points, [tuple(range(k,k+3)) for k in range(0,len(points),3)], all_triangles=True)
+
+
+def skin_z(tree,x,y,top):
+    z = 25 if top else -25
+    point = tree.ray_cast((x,y,z),(0,0,-1 if top else 1),60)[0]
+    if point is None:
+        raise ValueError(f"Missing support at ({x:.3f}, {y:.3f})")
+    return point.z
+
+
+contact_gaps = []
+
+
+def sack(g, xy, angle, seed, support=None):
+    x,y = xy
+    axis = Vector((cos(angle),sin(angle),0))
+    side = Z.cross(axis)
+    def at(t,v):
+        return Vector((x,y,0))+axis*t+side*v
+
+    body=[]; faces=[]; segments=16
+    sections=[(-.48,.025,.03,-.045),(-.39,.188,.115,-.018),(-.28,.211,.13,.014),
+              (.02,.225,.153,.023),(.29,.206,.132,0),(.41,.163,.095,-.017),(.49,.027,.032,-.04)]
+    for t,w,h,drop in sections:
         for i in range(segments):
             a=i*tau/segments
-            side=(abs(cos(a))**.76)*(1 if cos(a)>=0 else -1)
+            across=(abs(cos(a))**.76)*(1 if cos(a)>=0 else -1)
             up=(abs(sin(a))**.78)*(1 if sin(a)>=0 else -1)
-            wrinkle=1+.062*cos(a*4+along*28+seed)
-            verts.append(c+longitudinal*along+lateral*(side*w*wrinkle)+Z*(up*h+drop))
-    for j in range(6):
+            wrinkle=1+.062*cos(a*4+t*28+seed)
+            body.append(at(.86*t,across*w*wrinkle)+Z*(up*h+drop))
+    for j in range(len(sections)-1):
         for i in range(segments):
-            q=j*segments+i; k=j*segments+(i+1)%segments
-            faces.append((q,k,k+segments,q+segments))
+            a=j*segments+i; b=j*segments+(i+1)%segments
+            faces.append((a,b,b+segments,a+segments))
     faces.extend([tuple(reversed(range(segments))),tuple(range(6*segments,7*segments))])
-    batches[g].add("Repair flax",verts,faces,True)
-    points=[c+longitudinal*t+lateral*.093+Z*(.145-.36*abs(t)**2+.008*cos(15*t+seed)) for t in (-.34,-.23,-.1,.04,.17,.28,.35)]
-    cord(g,"Canvas",points,.009,5)
+    unseated = BVHTree.FromPolygons(body,faces)
+    along_pad=.238
+    across_pad=.067
+    receivers = support or (bank_tree,bank_tree)
+    if support:
+        # Each end bears on a different sack. The centre bridges the joint between them.
+        heights=[]
+        for k,receiver in enumerate(receivers):
+            end=[]
+            for sign in (-1,1):
+                pad=at((2*k-1)*along_pad,sign*across_pad)
+                end.append(skin_z(receiver,pad.x,pad.y,True)-skin_z(unseated,pad.x,pad.y,False)-.016)
+            heights.append(end)
+        def lift(point):
+            offset=point-Vector((x,y,0))
+            t=.5+offset.dot(axis)/(2*along_pad)
+            v=.5+offset.dot(side)/(2*across_pad)
+            a=heights[0][0]*(1-v)+heights[0][1]*v
+            b=heights[1][0]*(1-v)+heights[1][1]*v
+            return a*(1-t)+b*t
+    else:
+        def lift(point):
+            return skin_z(bank_tree,point.x,point.y,True)+.087
+    body=[v+Z*lift(v) for v in body]
+    seated = BVHTree.FromPolygons(body,faces)
+    batches[g].add("Repair flax",body,faces,True)
+    seam=[]
+    for t in (-.30,-.20,-.085,.035,.146,.24,.30):
+        v=at(t,.089)
+        v.z=skin_z(seated,v.x,v.y,True)+.003
+        seam.append(v)
+    cord(g,"Canvas",seam,.009,5)
     for direction in (-1,1):
-        tie=c+longitudinal*(direction*.455)-Z*.025
-        tube(g,"Canvas",tie-lateral*.047,tie+lateral*.047,.014,sides=6)
+        tie=at(direction*.393,0)
+        tie.z=lift(tie)-.026
+        tube(g,"Canvas",tie-side*.047,tie+side*.047,.014,sides=6)
+    # Measure the resulting triangles independently of the placement transform.
+    for k,receiver in enumerate(receivers):
+        gaps=[]
+        for t in (.16,.20,.24,.27):
+            for v in (-.068,0,.068):
+                pad=at((2*k-1)*t,v)
+                gaps.append(skin_z(seated,pad.x,pad.y,False)-skin_z(receiver,pad.x,pad.y,True))
+        # The soft underside may be embedded slightly; at least one patch on each receiver
+        # must physically meet it. A disjoint pile fails the authoring run.
+        gap=min(gaps)
+        if gap>.002:
+            raise ValueError(f"{g} sack {seed} has {gap:.3f} m of air below support {k}")
+        if support or k==0:contact_gaps.append(gap)
+    return seated
 
 
 def ground_seam(g, a, b, offset, side, seed):
@@ -205,12 +274,11 @@ def start_work():
         plank(g,"Timber",p,(0,side,0),(-side,0,0),.46,.14,.025,True)
         for sx in (-.044,.044):
             tube(g,"Oxide",(x+sx,-16+side*.60,.11),(x+sx,-16+side*.60,.129),.012,sides=8)
-    for i in range(8):
-        x=-40.6+.68*i;y=-18.82+.13*sin(i*2.4)
-        h=soil(x,y)
-        sack(g,(x,y,h+.105),rng.uniform(-.28,.19),i)
-        if i in (1,2,3,4,5):
-            sack(g,(x+.28,y+.025,h+.32),.18*sin(i),91+i)
+    places=[(-40.96+.77*i,-18.82+.048*sin(i*2.4)) for i in range(8)]
+    lower=[sack(g,xy,rng.uniform(-.13,.11),i) for i,xy in enumerate(places)]
+    for i in range(1,6):
+        a,b=places[i:i+2]
+        sack(g,((a[0]+b[0])/2,(a[1]+b[1])/2+.015),.07*sin(i),91+i,lower[i:i+2])
     # Revetment on the inner bend has been patched with sister timbers and structural brackets.
     for i in range(3):
         x=-38.65+i*1.14;y=-18.53
@@ -257,9 +325,11 @@ def station_work():
     for y in (-5.35,-4.25):
         for z in (1.732,1.848):
             tube(g,"Oxide",(-15.561,y,z),(-15.576,y,z),.012,sides=7)
-    for i in range(5):
-        x,y=-18.92+i*.54,-5.3-.11*sin(i)
-        sack(g,(x,y,soil(x,y)+.12),-.2+rng.uniform(-.22,.19),103+i)
+    places=[(-18.81+.78*i,-5.30-.052*sin(i)) for i in range(3)]
+    lower=[sack(g,xy,rng.uniform(-.10,.09),103+i) for i,xy in enumerate(places)]
+    for i in range(2):
+        a,b=places[i:i+2]
+        sack(g,((a[0]+b[0])/2,(a[1]+b[1])/2-.018),rng.uniform(-.08,.10),119+i,lower[i:i+2])
     x,y=-17.75,-4.96; z=soil(x,y)
     reel(g,(x,y,z+.55))
     # Sagging cable between the reel trolley and cups on the field shelter; stays along the bank.
@@ -408,9 +478,28 @@ def publish():
         object_types={"MESH"},use_custom_props=False,path_mode="STRIP")
     print("TRENCH_DRESSING",len(objects),"mesh batches,",sum(len(b.faces) for b in batches.values()),"faces")
 
+    # The library writer omits UI state. Make the standalone file open on its authored scene.
+    bpy.ops.wm.open_mainfile(filepath=str(bpy_path))
+    edit=bpy.data.scenes["Trench repairs and west portal"]
+    for window in bpy.context.window_manager.windows: window.scene=edit
+    for previous in list(bpy.data.scenes):
+        if previous!=edit and not len(previous.objects): bpy.data.scenes.remove(previous)
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type!="VIEW_3D": continue
+            space=area.spaces.active
+            space.region_3d.view_distance=8.2
+            space.region_3d.view_location=(-37.5,-18.2,.5)
+            space.region_3d.view_rotation=Euler((64*pi/180,0,-24*pi/180)).to_quaternion()
+            space.shading.color_type="MATERIAL"
+    bpy.context.preferences.filepaths.save_version=0
+    bpy.ops.wm.save_as_mainfile(filepath=str(bpy_path),compress=True)
+
 
 start_work()
 station_work()
 portal_work()
 close_sod_ends()
+assert len(contact_gaps)==25
+print("SACK CONTACTS: 11 ground sacks, 7 top sacks, 25 supports; largest measured gap",max(contact_gaps))
 publish()

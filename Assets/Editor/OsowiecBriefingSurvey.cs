@@ -20,7 +20,45 @@ public static class OsowiecBriefingSurvey
         public List<string> names=new();
         public List<Vector2> marks=new();
         public List<Vector2> deployment=new();
+        public List<Vector2> centralTrench=new();
     }
+    // In these two cut banks the imported terrain has additional erosion vertices.
+    // Keep the exact contact patches with the Blender source so the dressing can be rebuilt offline.
+    [MenuItem("Steel and Ashes/Export trench sack supports")]
+    public static void ExportSackSupports()
+    {
+        var scene=SceneManager.GetSceneByPath(Field);
+        bool opened=!scene.IsValid() || !scene.isLoaded;
+        if(opened)scene=EditorSceneManager.OpenScene(Field,OpenSceneMode.Additive);
+        try
+        {
+            var patches=new[]{
+                new Bounds(new Vector3(-38.25f,1,-18.82f),new Vector3(6.4f,30,1.4f)),
+                new Bounds(new Vector3(-17.85f,1,-5.30f),new Vector3(4.2f,30,1.3f))
+            };
+            var geometry=new SupportPatches();
+            foreach(var tile in scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<MeshCollider>())
+                    .Where(c=>c.name.StartsWith("Biebrza ground Ground_",StringComparison.Ordinal) && patches.Any(b=>b.Intersects(c.bounds))))
+            {
+                var mesh=tile.sharedMesh;
+                var vertices=mesh.vertices.Select(tile.transform.TransformPoint).ToArray();
+                var tris=mesh.triangles;
+                for(int i=0;i<tris.Length;i+=3)
+                {
+                    var a=vertices[tris[i]];var b=vertices[tris[i+1]];var c=vertices[tris[i+2]];
+                    var bounds=new Bounds(a,Vector3.zero);bounds.Encapsulate(b);bounds.Encapsulate(c);
+                    if(!patches.Any(p=>p.Intersects(bounds)))continue;
+                    geometry.triangles.Add(a);geometry.triangles.Add(b);geometry.triangles.Add(c);
+                }
+            }
+            if(geometry.triangles.Count==0)throw new InvalidOperationException("Missing Unity terrain for sack supports");
+            File.WriteAllText("Assets/Osowiec/Art/Source~/trench_sack_supports.json",JsonUtility.ToJson(geometry));
+            Debug.Log($"Exported {geometry.triangles.Count/3} terrain triangles for Blender sandbag contacts.");
+        }
+        finally { if(opened)EditorSceneManager.CloseScene(scene,true); }
+    }
+    [Serializable] sealed class SupportPatches { public List<Vector3> triangles=new(); }
+
     static Vector2 XZ(Vector3 v)=>new(v.x,v.z);
 
     [MenuItem("Steel and Ashes/Export headquarters paper survey")]
@@ -34,6 +72,7 @@ public static class OsowiecBriefingSurvey
             var roots=field.GetRootGameObjects();
             var fort=roots.Single(r=>r.name=="Osowiec · Fort I");
             var survey=new Survey();
+            survey.centralTrench.AddRange(OsowiecCentralTrench.Course);
             var bounds=new Bounds(new Vector3((survey.left+survey.right)*.5f,0,(survey.bottom+survey.top)*.5f),
                 new Vector3(survey.right-survey.left,60,survey.top-survey.bottom));
             var earth=fort.GetComponentsInChildren<MeshCollider>(true)

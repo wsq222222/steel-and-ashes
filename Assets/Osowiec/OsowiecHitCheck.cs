@@ -180,15 +180,18 @@ public sealed class OsowiecHitCheck : MonoBehaviour
         var presentation = patient.GetComponent<TacticalUnitPresentation>() ?? patient.gameObject.AddComponent<TacticalUnitPresentation>();
         presentation.SetBodyVisualVisible(true);
         CheckWornShell(patient, 1);
+        int Damage(Unit attacker, OsowiecHitArea area) =>
+            OsowiecFieldTurn.ShotDamage(attacker.GetEquippedWeapon().Config.damagePerHit,area,false,3,false,1f);
         Shoot(marksman, patient, crown);
+        int afterShell=initial-Damage(marksman,OsowiecHitArea.Helmet);
         presentation.SetBodyVisualVisible(false);
         presentation.SetBodyVisualVisible(true);
         CheckWornShell(patient, 0);
-        Require(patient.GetHealth()==initial && !helmet.gameObject.activeSelf && BeforeDrop()==debris+1, "Helmet failed to separate cleanly");
+        Require(patient.GetHealth()==afterShell && !helmet.gameObject.activeSelf && BeforeDrop()==debris+1, "Helmet failed to separate cleanly");
         var drop = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None).First(b=>b.name=="Сбитая каска");
         Require(drop.GetComponent<MeshFilter>().sharedMesh==helmet.helmetMesh && drop.useGravity, "Dropped mesh mismatch");
         Shoot(shooter, patient, crown);
-        Require(BeforeDrop()==debris+1 && patient.GetHealth()==initial,"Duplicate helmet or false hit above bare skull");
+        Require(BeforeDrop()==debris+1 && patient.GetHealth()==afterShell,"Duplicate helmet or false hit above bare skull");
 
         var head = Part(patient,OsowiecHitArea.Head);
         var joint = head.transform.parent;
@@ -196,10 +199,22 @@ public sealed class OsowiecHitCheck : MonoBehaviour
         Physics.SyncTransforms();
         var cheek = Center(head) - Vector3.up*.036f;
         Shoot(shooter,patient,cheek);
-        Require(patient.GetHealth()<=0,"Next exposed head hit after helmet loss");
+        Require(patient.GetHealth()==afterShell-Damage(shooter,OsowiecHitArea.Head),"Exposed head after helmet loss used wrong profile");
         patient = Target();
-        Shoot(marksman,patient,Center(Part(patient,OsowiecHitArea.Head))-Vector3.up*.036f);
-        Require(patient.GetHealth()<=0,"Marksman direct head hit");
+        var protectedHead = Part(patient,OsowiecHitArea.Head);
+        var capsule = protectedHead.GetComponent<CapsuleCollider>();
+        Vector3 Point(float height) => capsule.transform.TransformPoint(capsule.center+Vector3.up*(height-.5f)*capsule.height);
+        foreach (var direction in new[]{Vector3.forward,Vector3.right,(Vector3.right+Vector3.forward).normalized})
+        {
+            foreach (float height in new[]{.40f,.55f,.70f})
+            {
+                var point = Point(height);
+                Require(OsowiecHitBody.Trace(marksman,new Ray(point+direction*3,-direction),4,~0,out _,out var covered)
+                    && covered && covered.area==OsowiecHitArea.Helmet,"Missing helmet protection at "+height+" from "+direction);
+            }
+        }
+        Shoot(marksman,patient,Point(.19f));
+        Require(patient.GetHealth()==initial-Damage(marksman,OsowiecHitArea.Head),"Exposed lower head did not use capped critical damage");
 
         patient = Target();
         initial = patient.GetHealth();
@@ -218,11 +233,11 @@ public sealed class OsowiecHitCheck : MonoBehaviour
         Require(Mathf.Abs(initial-patient.GetHealth()-shooter.GetEquippedWeapon().Config.damagePerHit)<=(shooter.chessType==ChessUnitType.Pawn?2:1) && patient.GetHealth()>0,"Carbine body damage");
         patient = Target();
         Shoot(marksman,patient,Center(Part(patient,OsowiecHitArea.Torso)));
-        Require(patient.GetHealth()<=0,"Marksman first body hit");
+        Require(patient.GetHealth()==initial-Damage(marksman,OsowiecHitArea.Torso) && patient.GetHealth()>0,"Marksman torso incorrectly lethal");
         patient = Target();
         var shin = patient.GetComponentsInChildren<OsowiecHitPart>().First(p=>p.name=="Hit LShin");
         Shoot(marksman,patient,Center(shin));
-        Require(patient.GetHealth()>0 && patient.GetHealth()<initial,"Limb incorrectly treated as body or missed");
+        Require(patient.GetHealth()==initial-Damage(marksman,OsowiecHitArea.Limb),"Limb used incorrect profile");
 
         patient = Target();
         var waiting = Instantiate(shooter, patient.transform.position + Vector3.forward*3, Quaternion.LookRotation(Vector3.back));

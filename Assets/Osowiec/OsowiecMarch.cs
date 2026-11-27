@@ -13,7 +13,7 @@ internal static class OsowiecMarch
         var operation = OsowiecOperation.Instance;
         var game = GameManager.Instance;
         if (!operation || !game || !unit || !unit.isActiveAndEnabled || unit.owner != Player.Player1 ||
-            unit.GetHealth() <= 0 || game.IsGameOver() || game.IsArmyDeploymentPhase() || game.IsBotTurn())
+            unit.GetHealth() <= 0 || unit.FieldTurn.RifleSpent || game.IsGameOver() || game.IsArmyDeploymentPhase() || game.IsBotTurn())
             return false;
 
         float now = Time.time;

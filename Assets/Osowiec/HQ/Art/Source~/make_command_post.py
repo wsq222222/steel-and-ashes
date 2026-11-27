@@ -400,10 +400,48 @@ def gramophone():
         for y in [-.178,.178]:
             cyl('Corner screw',(x,y,1.069),.008,.004,'Brass',segments=10)
     x,y=-.046,-.033
+    rotor=bpy.data.objects.new('RecordPlatter',None)
+    bpy.context.collection.objects.link(rotor)
+    rotor.location=(x,y,1.09)
+    rotor.empty_display_size=.03
+    stationary=set(bpy.context.scene.objects)
     cyl('Platter', (x,y,1.078),.159,.015,'Canvas',segments=56)
     cyl('Shellac',(x,y,1.090),.158,.005,'Bakelite',segments=88)
     cyl('Printed paper label',(x,y,1.095),.048,.003,'Wax',segments=40)
+    # Pressed grooves and asymmetric ivory label ornaments make disc travel visible;
+    # the label sits below the spindle shoulder, the needle stays with the case.
+    for radius in (.053,.077,.101,.128,.152):
+        ring=[(x+radius*cos(2*pi*j/128),y+radius*sin(2*pi*j/128),1.09254) for j in range(128)]
+        tube('Shellac groove',ring+[ring[0]],.00022,'Graphite',False)
+    for radius,start,end in [(.039,.10,2.92),(.039,3.35,5.25),(.035,3.75,5.15)]:
+        arc=[(x+radius*cos(start+(end-start)*j/38),y+radius*sin(start+(end-start)*j/38),1.09662) for j in range(39)]
+        tube('Printed label rule',arc,.00046,'Paper',False)
+    for dx,dy,width in [(.014,.016,.019),(.013,.012,.013),(.014,.009,.010)]:
+        box('Catalogue stamp',(x+dx,y+dy,1.09668),(width,.0014,.00022),'Paper',0)
+    witness=bpy.data.objects.new('RecordWitness',None)
+    bpy.context.collection.objects.link(witness)
+    witness.location=(x+.014,y+.016,1.09668)
+    witness.empty_display_size=.004
+    bpy.context.view_layer.update()
+    for piece in set(bpy.context.scene.objects)-stationary:
+        piece.parent=rotor
+        piece.matrix_parent_inverse=rotor.matrix_world.inverted()
     cyl('Spindle',(x,y,1.103),.004,.019,'Brass',segments=14)
+    # The load path is visible from the front: rear case plate, two lugs, a cast
+    # gooseneck and a bolted band under the flare. The acoustic socket is separate.
+    box('Cast rear bracket plate',(.183,.218,.975),(.109,.026,.152),'Oxide',.006)
+    for dx in (-.037,.037):
+        for dz in (-.051,.051):
+            cyl('Backplate bolt',(.183+dx,.235,.975+dz),.008,.009,'Brass',(0,1,0),6)
+    for dx in (-.032,.032):
+        tube('Rear bracket lug',[(.183+dx,.224,.945),(.183+dx,.246,.967),(.183,.264,1.051)],.011,'Oxide')
+    tube('Cast gooseneck',[(.183,.222,1.001),(.183,.261,1.041),(.183,.269,1.136),
+                            (.179,.249,1.209),(.173,.183,1.236),(.172,.127,1.249)],.018,'Oxide')
+    turned('Bolted elbow socket',.184,.128,1.064,[(0,.048),(.007,.048),(.012,.036),(.018,.029),
+            (.043,.024),(.063,.020),(.083,.021)],'Brass')
+    for j in range(4):
+        a=pi/4+j*pi/2
+        cyl('Socket bolt',(.184+.037*cos(a),.128+.037*sin(a),1.075),.005,.005,'Oxide',segments=6)
     rod('Tone arm pivot',(.198,.091,1.075),(.198,.091,1.18),.019,'Steel')
     tube('Nickel tone arm',[(.198,.091,1.174),(.20,.022,1.185),(.136,-.063,1.169),(.094,-.071,1.142)],.009,'Brass')
     cyl('Sound box',(.091,-.073,1.132),.022,.012,'Brass',(1,0,0))
@@ -428,9 +466,21 @@ def gramophone():
             ring.append(pos)
             verts.append(pos[:])
         centers.append(c);rings.append(ring)
+    idx=3
+    band_axis=(centers[idx+1]-centers[idx-1]).normalized()
+    for offset in (-.010,.010):
+        band=[p+(p-centers[idx])*.23+band_axis*offset for p in rings[idx]]
+        tube('Horn support split collar',band+[band[0]],.0045,'Brass',False)
+    rod('Collar clamp bolt',(.155,.144,1.239),(.186,.151,1.239),.005,'Steel',10)
     for i in range(segments):
         for j in range(nb):faces.append((i*nb+j,i*nb+(j+1)%nb,(i+1)*nb+(j+1)%nb,(i+1)*nb+j))
     mesh=bpy.data.meshes.new('Pressed brass bell');mesh.from_pydata(verts,[],faces);mesh.update()
+    uv=mesh.uv_layers.new(name='Rolled sheet')
+    for f in mesh.polygons:
+        i,j=divmod(f.index,nb)
+        for loop,coords in zip(f.loop_indices,[(j/nb,i/segments),((j+1)/nb,i/segments),
+                                                ((j+1)/nb,(i+1)/segments),(j/nb,(i+1)/segments)]):
+            uv.data[loop].uv=coords
     o=bpy.data.objects.new('Pressed brass bell',mesh);bpy.context.collection.objects.link(o);assign(o,'Petalled acoustic horn','Brass')
     for face in mesh.polygons:face.use_smooth=True
     solid=o.modifiers.new('Folded edge','SOLIDIFY');solid.thickness=.0025
@@ -450,16 +500,20 @@ def save(name):
             bpy.context.view_layer.objects.active=o;o.select_set(True)
             bpy.ops.object.convert(target='MESH');o.select_set(False)
         if o.type=='MESH':objs.append(o)
-    # Join one mesh per material to preserve Unity authoring and reduce draw calls.
-    for m in materials.values():
-        parts=[o for o in objs if o and o.type=='MESH' and o.data.materials and o.data.materials[0]==m]
-        if not parts:continue
+    # Keep the rotating shellac and its label in a separate transform hierarchy.
+    # Meshes in the stationary shell share the existing HQ material naming scheme.
+    groups={}
+    for o in objs:
+        if o.data.materials:
+            rotating=name=='FieldGramophone' and o.parent is not None and o.parent.name=='RecordPlatter'
+            groups.setdefault((rotating,o.data.materials[0]),[]).append(o)
+    for (rotating,m),parts in groups.items():
         for o in parts:o.select_set(True)
         bpy.context.view_layer.objects.active=parts[0]
-        bpy.ops.object.join()
+        if len(parts)>1:
+            bpy.ops.object.join()
         combined=bpy.context.object
-        combined.name=m.name
-        objs=[o for o in bpy.context.scene.objects if o.type=='MESH']
+        combined.name='Record_'+m.name.removeprefix('HQ_') if rotating else m.name
         bpy.ops.object.select_all(action='DESELECT')
     for name_,pos in [('SurveyOrigin',(0,0,0)),('SurveyNorth',(0,1,0)),('SurveyUp',(0,0,1))]:
         o=bpy.data.objects.new(name_,None);bpy.context.collection.objects.link(o);o.location=pos
@@ -467,10 +521,13 @@ def save(name):
         apply_unit_scale=True,apply_scale_options='FBX_SCALE_UNITS',bake_anim=False,path_mode='STRIP')
 
 
-table()
-if '--table-only' not in sys.argv:
-    room_stores()
-if '--table-only' not in sys.argv and '--office' not in sys.argv:
-    lantern()
-    board()
+if '--gramophone-only' in sys.argv:
     gramophone()
+else:
+    table()
+    if '--table-only' not in sys.argv:
+        room_stores()
+    if '--table-only' not in sys.argv and '--office' not in sys.argv:
+        lantern()
+        board()
+        gramophone()

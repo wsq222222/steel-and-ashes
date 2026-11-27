@@ -1,0 +1,232 @@
+Осовец	Osowiec
+ОСОВЕЦ	OSOWIEC
+Осовец  ·  Полевой штаб	Osowiec  ·  Field headquarters
+ШТАБ КРЕПОСТИ   /   БОЕВОЙ ПРИКАЗ	FORTRESS HEADQUARTERS   /   FIELD ORDER
+К штабному столу	Go to the command table
+К расстановке	Deploy squad
+К расстановке  [Esc]	Back to deployment  [Esc]
+В штаб	Return to headquarters
+Продолжить	Continue
+Настройки	Settings
+Выйти из игры	Quit game
+Готово	Done
+Завершить игру?	Quit the game?
+Остаться	Stay
+Язык · Русский	Language · English
+ПОЛЕВОЙ ЖУРНАЛ	FIELD JOURNAL
+Форт I   ·   Осовец	Fort I   ·   Osowiec
+Привал	Pause
+Звук	Audio
+Громкость	Volume
+Изображение	Video
+Управление	Controls
+Музыка	Music
+Эффекты и шаги	Effects and footsteps
+Окружение	Ambience
+Звуки интерфейса	Interface sounds
+Угол обзора	Field of view
+Качество графики	Graphics quality
+Масштаб интерфейса	Interface scale
+Полный экран	Fullscreen
+Уменьшить эффекты	Reduce effects
+Уменьшить тряску	Reduce camera shake
+Чувствительность мыши	Mouse sensitivity
+Инверсия обзора по вертикали	Invert vertical look
+Субтитры полевых событий	Field event subtitles
+W A S D    Передвижение\nE    Взаимодействие\nR    Перезарядка\nM    План крепости     J    Журнал задач\nTab    Передать ход	W A S D    Move\nE    Interact\nR    Reload\nM    Fortress map     J    Objectives\nTab    End turn
+WASD  Ходьба     ESC  Пауза	WASD  Walk     ESC  Pause
+[E]  Открыть карту операций	[E]  Open operations map
+[E]  Выключить граммофон	[E]  Stop gramophone
+[E]  Включить граммофон	[E]  Play gramophone
+Отменить бросок или прыжок      {0}	Cancel throw or jump      {0}
+Связь с батареей оборвалась. Дойди до развилки и вызови штаб по телефону. Затем восстанови оба ввода, проведи три повозки в лазарет и удержи батарею.	Contact with the battery has been lost. Reach the junction and call headquarters. Restore both feeds, escort three wagons to the hospital and hold the battery.
+От лазарета к телефону ведёт западный ход. Из центральной траншеи идите по настилу до развилки. За телефоном в низине нужна маска. Заряд у двери каземата [E] поднимет тревогу.	The western trench leads from the field hospital to the telephone. From the central trench, follow the duckboards to the junction. Wear a mask in the lowland beyond the telephone. A charge at the casemate door [E] will raise the alarm.
+Начать заново	Restart
+Вернуться в штаб	Return to headquarters
+Журнал задач   [J]	Objectives   [J]
+Журнал задач	Objectives
+Закрыть журнал	Close journal
+Санитарная колонна	Medical convoy
+Сбросить	Reset
+ЛИСТ КОМПЛЕКТОВАНИЯ	PERSONNEL ROLL
+Расстановка	Deployment
+Начать операцию	Start operation
+Выберите бойца и укажите место на карте.	Choose a soldier, then select a position on the map.
+Для начала поставьте хотя бы одного бойца.	Deploy at least one soldier to begin.
+Осмотреть местность	Survey terrain
+Молот	Hammer
+Циклоп	Cyclops
+Гончая	Hound
+Штурмовик	Assault
+Наблюдатель	Observer
+Разведчик	Scout
+Сменить участок  [Q]	Switch sector  [Q]
+Сменить участок   [Q]	Switch sector   [Q]
+WASD — обзор    Колесо — масштаб	WASD — pan    Wheel — zoom
+У лазарета	At the hospital
+Западный ход	Western approach
+Центральная траншея	Central trench
+От лазарета вперёд, до последнего поворота к телефону.	From the field hospital, follow the trench to the last turn before the telephone.
+По настилу до изгиба траншеи, затем направо к телефону.	Follow the duckboards through the bend, then turn right for the telephone.
+Сначала выберите бойца и укажите свободную позицию на карте.	Select a soldier and choose an open position on the map.
+{0} · правая кнопка или Delete, чтобы снять бойца.	{0} · right-click or press Delete to remove.
+Свободное место. Щёлкните или нажмите Enter, чтобы поставить выбранного бойца.	Empty position. Click or press Enter to deploy the selected soldier.
+{0} · {1} · {2:0} м\n{3}	{0} · {1} · {2:0} m\n{3}
+Зажмите Q, чтобы выбрать длину прыжка. Отпустите для прыжка или расчистки проволоки. Выстрел остаётся.	Hold Q to set jump distance. Release to jump or clear wire. You can still fire.
+Q открывает перископ. ЛКМ отмечает врага на два хода (+20% урона от винтовок). Проведите свой ход без движения и атаки: следующий выстрел с 10 м получит ×2. Предел урона — 84, по каске — 24.	Q opens the periscope. Left-click to mark an enemy for two turns (+20% rifle damage). Spend your activation without moving or attacking to double your next shot from 10 m. Maximum damage is 84, or 24 on a helmet.
+Q добавляет 6 м. После выстрела Гончая может пройти оставшиеся метры. За ход доступен один выстрел.	Q adds 6 m. After firing, Hound can spend the rest of her movement. One shot per turn.
+Позиция занята   ·   {0}	Deployed   ·   {0}
+Боец возвращён в резерв	Soldier returned to reserve
+Расстановка очищена	Deployment cleared
+Снабжение  {0} / {1}     Бойцов  {2}	Supply  {0} / {1}     Troops  {2}
+Выберите следы на настиле	Choose a marked position
+Позиция занята · ПКМ снять, Shift заменить	Occupied · right-click to remove, Shift to replace
+Недостаточно снабжения	Insufficient supply
+Лимит этой роли исчерпан	Role limit reached
+Экран	Display
+Детализация	Detail
+Камера	Camera
+Выкл.	Off
+Вкл.	On
+Режим окна	Display mode
+В окне	Windowed
+Без рамки	Borderless
+Разрешение	Resolution
+Вертик. синхронизация	Vertical sync
+Частота кадров	Frame rate
+По монитору	Monitor refresh
+Без лимита	Unlimited
+Применить режим	Apply display mode
+Оставить	Keep
+Вернуть	Revert
+Размер окна задан при запуске.	Window size was set at launch.
+Новый режим потребует подтверждения.	Confirm the new display mode after applying.
+Масштаб рендера	Render scale
+Рельеф вблизи	Terrain detail
+Тени солнца	Sun shadows
+Дальность теней	Shadow distance
+Сглаживание	Anti-aliasing
+Текстуры	Textures
+Полные	Full
+½ размера	Half size
+¼ размера	Quarter size
+Поле зрения	Field of view
+Яркость	Brightness
+Размер интерфейса	Interface size
+Эффекты погоды	Weather effects
+Облегчённые	Reduced
+Тряска камеры	Camera shake
+Слабая	Low
+Обычная	Normal
+По умолчанию	Restore defaults
+Возврат через {0} с	Reverting in {0} s
+{0} м	{0} m
+Эвакуация начнётся после восстановления связи с батареей.	Evacuation will start once contact with the battery is restored.
+БОЕВОЙ ПРИКАЗ	FIELD ORDER
+Рапорт	Report
+Повторить операцию	Replay operation
+Итог операции	Operation outcome
+БРИФИНГ	BRIEFING
+Ведомость	Register
+Победа	Victory
+В МЕНЮ	MAIN MENU
+ВЫБРАТЬ	SELECT
+ЗВУКИ	SOUND
+МИССИИ	MISSIONS
+МУЗЫКА	MUSIC
+НАЗАД	BACK
+НАСТРОЙКИ	SETTINGS
+ПРИМЕНИТЬ	APPLY
+ПРОДОЛЖИТЬ	CONTINUE
+ЛИЧНЫЙ СОСТАВ	PERSONNEL
+РАССТАНОВКА	DEPLOYMENT
+УЧАСТОК ПОДХОДА	APPROACH SECTOR
+ОСТАЛОСЬ СНАБЖЕНИЯ	REMAINING SUPPLY
+ОПЕРАТИВНЫЙ ОТДЕЛ   /   ФОРТ I	OPERATIONS OFFICE   /   FORT I
+ПРИКАЗ НА ВЫДВИЖЕНИЕ	MOVEMENT ORDER
+ПОЛЕВАЯ КАРТОЧКА	FIELD RECORD
+Позиции	Positions
+Расстановка отряда	Squad deployment
+Подтвердить отряд	Confirm squad
+Громкость звука	Sound volume
+Громкость музыки	Music volume
+Поражение	Defeat
+»  Наблюдение	»  Observation
+×2 с 10 м · до 84	×2 at 10 m · max 84
+Гончая   •   Добавлено 6 м	Hound   •   Added 6 m
+Можно пройти оставшиеся метры.	You can spend your remaining movement.
+Пневмотолчок	Pneumatic leap
+Перископ	Periscope
+Рывок	Dash
+Q · Сложить	Q · Stow
+Q · Наблюдать	Q · Observe
+Следующий ход	Next turn
+Удерживайте Q	Hold Q
+Q · Применить	Q · Use
+Отпустите Q для прыжка	Release Q to jump
+Путь перекрыт	Path blocked
+Отпустите ЛКМ для броска	Release LMB to throw
+Удерживайте ЛКМ для броска	Hold LMB to throw
+Отмена	Cancel
+ПКМ	RMB
+СКМ	MMB
+Посадка · {0:0.0} м	Landing · {0:0.0} m
+Преграда · {0:0.0} м	Blocked · {0:0.0} m
+Караул поднят. Подкрепление на подходе.	The guard has raised the alarm. Reinforcements are on their way.
+Батарея вызвала резерв к обозу.	The battery has called up reserves to intercept the convoy.
+МЕТКА · {0} х.	MARK · {0} turns
+Последняя позиция · {0} х.	Last known position · {0} turns
+Газ закрывает обзор	Gas obscures the view
+Дым закрывает обзор	Smoke obscures the view
+Линия обзора перекрыта	Line of sight blocked
+Наведите перекрестие на силуэт	Aim the reticle at a silhouette
+Цель отмечена · {0}	Target marked · {0}
+Новая метка будет доступна в следующий ход	You can mark again next turn
+Метка не поставлена   ·   укрытие	Target behind cover
+Метка не поставлена   ·   дым	Smoke prevents marking
+Метка не поставлена   ·   газ	Gas prevents marking
+Метка не поставлена   ·   цель не найдена	No target to mark
+{0}   −{1} ОЗ   ·   Осталось {2} ОЗ	{0}   −{1} HP   ·   {2} HP remaining
+{0}   ·   {1:0} м	{0}   ·   {1:0} m
+Новая метка · следующий ход	Mark again next turn
+ЛКМ · отметить	LMB · mark
+Колесо · 4×	Scroll · 4×
+Колесо · 2×	Scroll · 2×
+Дозорный	Patrol sentry
+Защитник входа	Entrance guard
+Расчёт батареи	Battery crew
+Защитник двора	Courtyard guard
+Смотритель ворот	Gatekeeper
+Сменный дозор	Relief patrol
+Дозор у низины	Lowland patrol
+Часовой галереи	Gallery sentry
+Дозор у бастиона	Bastion patrol
+Tab   Закончить ход	Tab   End turn
+ЗДОРОВЬЕ	HEALTH
+ПЕРЕДВИЖЕНИЕ	MOVEMENT
+ОСТАЛОСЬ ХОДА	MOVE LEFT
+Марш	March
+ПАТРОНЫ	AMMO
+ФИЛЬТР · НАДЕТ	FILTER · ON
+ФИЛЬТР	FILTER
+{0:0.0} м	{0:0.0} m
+{0} с	{0} s
+T   Снять маску     X   Протереть	T   Remove mask     X   Wipe lens
+T   Надеть маску	T   Put on mask
+Перезарядка…	Reloading…
+Держите ЛКМ     {0} ×{1}	Hold LMB     {0} ×{1}
+ЛКМ   Удар штыком	LMB   Bayonet thrust
+G / F1   Снаряжение	G / F1   Equipment
+!  Подавление	!  Suppressed
+Подавление	Suppressed
+Карабин	Carbine
+Осколочная	Frag grenade
+Дым	Smoke
+Штык	Bayonet
+Газовая	Gas grenade
+[Шипение]	[Hissing]
+[Взрыв гранаты]	[Grenade blast]
+[Осыпается мокрая земля]	[Wet earth crumbles]
+[Нарастает свист снаряда]	[Incoming shell whistles]
+[Скрип ворот]	[Gate creaks]
+[Северный пост предупреждает о газе на насыпи]	[North post reports gas on the embankment]

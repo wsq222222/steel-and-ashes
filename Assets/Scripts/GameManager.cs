@@ -426,7 +426,7 @@ public class GameManager : MonoBehaviour
         {
             if (unit != null)
             {
-                if (OsowiecPlanner.Instance && unit.owner == Player.Player1 && currentPlayer == Player.Player2)
+                if (OsowiecPlanner.Instance && unit.owner != currentPlayer)
                     unit.FieldTurn.Finish(unit.chessType == ChessUnitType.Bishop);
                 unit.UpdateAbilityEffects();
             }

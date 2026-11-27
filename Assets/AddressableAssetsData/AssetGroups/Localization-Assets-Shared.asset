@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Localization-Assets-Shared
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Localization-Assets-Shared
+  m_GUID: f3307d5b0a0549f4fad1c54460d75c4f
+  m_SerializeEntries:
+  - m_GUID: d1d2982d95fd0db4aac53a0dfc3c9a71
+    m_Address: Assets/Osowiec/HQ/Localisation/Osowiec Artwork Shared Data.asset
+    m_ReadOnly: 1
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f584d79b7fff5ef48b455ac99de36667
+    m_Address: Assets/Osowiec/HQ/Localisation/Osowiec UI Shared Data.asset
+    m_ReadOnly: 1
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 1
+  m_Settings: {fileID: 11400000, guid: 7202daaf190cd2f429d113726196b7d9, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 65c5c19dacdfcac4b9ca45765dcfa31d, type: 2}
+    - {fileID: 11400000, guid: 64eabb20d45b9a44689ba9ed38ff6a41, type: 2}
+    - {fileID: 11400000, guid: 04af291e6811ed2449ea1f75b2485478, type: 2}

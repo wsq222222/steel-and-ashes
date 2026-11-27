@@ -39,8 +39,8 @@ public static partial class OsowiecHeadquartersBuilder
             rows[i]=row.GetComponent<Image>(); button.targetGraphic=rows[i];
             UnityEventTools.AddIntPersistentListener(button.onClick,roster.SelectOffer,i);
             var drag=row.gameObject.AddComponent<OsowiecPaperDrag>(); drag.board=roster;drag.offer=i;
-            var portrait=Print(row,"portraits",new(.10f,.50f),new(67,72));
-            portrait.texture=atlas;portrait.uvRect=new Rect(i/3f+.047f,0,.24f,1);
+            var portrait=Print(row,"portraits",new(.10f,.50f),new(60,72));
+            portrait.texture=atlas;portrait.uvRect=new Rect(i/3f,0,1f/3f,1);
             Type(row,"Role name",unit.GetUnitDisplayName(),.56f,.67f,270,41,31,PaperInk);
             Type(row,"Assignment",roles[i],.56f,.28f,270,33,21,GhostInk);
             Type(row,"Issue cost",cost.ToString(),.935f,.50f,39,39,27,PaperInk);
@@ -48,8 +48,8 @@ public static partial class OsowiecHeadquartersBuilder
         var description=Type(paper,"Role particulars","",.5f,.364f,452,140,23,PaperInk);
         description.alignment=TextAlignmentOptions.TopLeft;
         var requirement=Type(paper,"Minimum personnel","Для начала поставьте хотя бы одного бойца.",.5f,.236f,452,44,21,RedInk);
-        var go=Link(paper,"Begin operation","Начать операцию    →",.50f,.154f,452,roster.Confirm,true);
-        var hq=Link(paper,"Return to headquarters","←   В штаб",.50f,.065f,452,roster.Headquarters);
+        var go=Link(paper,"Begin operation","Начать операцию",.50f,.154f,452,roster.Confirm,true);
+        var hq=Link(paper,"Return to headquarters","В штаб",.50f,.065f,452,roster.Headquarters);
         hq.GetComponent<RectTransform>().sizeDelta=new(452,52);
         var targets=OsowiecDeploymentSectors.Cells;
         var grid=Object.FindFirstObjectByType<ChessGrid>();
@@ -57,8 +57,6 @@ public static partial class OsowiecHeadquartersBuilder
         var buttons=new Image[slotCount];var portraits=new RawImage[slotCount];var blank=new TMP_Text[slotCount];
         for(int sector=0;sector<targets.Length;sector++)
         {
-            var title=Type(desk,"Sector title "+sector,OsowiecDeploymentSectors.Titles[sector],.5f,.5f,184,42,27,RedInk);
-            title.alignment=TextAlignmentOptions.Center;
             for(int n=0;n<targets[sector].Length;n++)
             {
                 int index=sector*targets[sector].Length+n;
@@ -87,46 +85,73 @@ public static partial class OsowiecHeadquartersBuilder
 
     static void FitDeploymentSheet(RectTransform desk,OsowiecPaperPlacement roster,ChessGrid grid)
     {
+        var targets=OsowiecDeploymentSectors.Cells;
+        var previousMap=desk.Find("Plan of the operation");
+        if(previousMap)
+            foreach(var tile in previousMap.GetComponentsInChildren<OsowiecPaperSlot>(true))
+                if(tile.name.StartsWith("Position ")) tile.transform.SetParent(desk,false);
         foreach(string name in new[]{"fort-ink","Field title","Placement boundary 0","Placement boundary 1",
-            "Roster inset 0","Roster inset 1","Plan of the operation"})
+            "Roster inset 0","Roster inset 1","Sector title 0","Sector title 1","Plan of the operation"})
         {
             var old=desk.Find(name);
             if(old)Object.DestroyImmediate(old.gameObject);
         }
-        var map=PlaceSurvey(desk,CreateOperationMap(),new Vector2(.671f,.605f),1110);
-        var projection=OsowiecSurveyProjection.Current;
+        var stamp=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Osowiec/Art/DeploymentStamp.png");
+        if(!stamp)throw new System.InvalidOperationException("Deployment stamp sprite is missing");
+        var map=PlaceSurvey(desk,CreateOperationMap(),new Vector2(.665f,.551f),1120);
         void Move(string name,Vector2 anchor)
         {
-            var r=(RectTransform)desk.Find(name);
-            r.anchorMin=r.anchorMax=anchor;r.anchoredPosition=Vector2.zero;
+            var rect=(RectTransform)desk.Find(name);
+            rect.anchorMin=rect.anchorMax=anchor;rect.anchoredPosition=Vector2.zero;
         }
-        Move("Personnel roll",new(.216f,.51f));Move("Field note",new(.671f,.160f));
-        Move("Return to ground",new(.606f,.091f));Move("Reset placement",new(.802f,.091f));
-        for(int sector=0;sector<OsowiecDeploymentSectors.Cells.Length;sector++)
+        Move("Personnel roll",new(.210f,.510f));Move("Field note",new(.665f,.196f));
+        Move("Return to ground",new(.606f,.131f));Move("Reset placement",new(.802f,.131f));
+        for(int sector=0;sector<targets.Length;sector++)
         {
-            float centre=.527f+sector*.282f;
-            var inset=Box(desk,"Roster inset "+sector,new(centre,.235f),new(508,83),Parchment,false);
-            inset.SetSiblingIndex(map.GetSiblingIndex()+1);
-            Line(inset,"Rule",new(.5f,.95f),new(493,1),GhostInk);
-            Move("Sector title "+sector,new(centre-.074f,.235f));
-            var title=(RectTransform)desk.Find("Sector title "+sector);
-            title.sizeDelta=new(184,42);
-            title.GetComponent<TMP_Text>().text=OsowiecDeploymentSectors.Titles[sector];
-            var cells=OsowiecDeploymentSectors.Cells[sector];
+            var cells=targets[sector];
+            var centre=Vector2.zero;
+            foreach(var cell in cells) centre+=OsowiecSurveyProjection.Current.Anchor(grid.GridToWorldPosition(cell.x,cell.y));
+            centre/=cells.Length;
+            // Keep each callout attached to its surveyed location with an ink leader.
+            // Lift the lowland figures above the printed telephone-junction caption.
+            float rowOffset=sector==1?36:0;
+            var leaderEnd=new Vector2(29,rowOffset);
+            var leader=Box(map,"Deployment leader "+sector,centre,new(leaderEnd.magnitude,2),RedInk,false);
+            leader.pivot=new(0,.5f);leader.anchoredPosition=Vector2.zero;
+            leader.localRotation=Quaternion.Euler(0,0,Mathf.Atan2(leaderEnd.y,leaderEnd.x)*Mathf.Rad2Deg);
             for(int n=0;n<cells.Length;n++)
             {
                 int id=sector*cells.Length+n;
-                Move("Position "+id,new(centre+.008f+n*.041f,.235f));
-                var tile=desk.Find("Position "+id);
+                var cell=cells[n];
+                var anchor=OsowiecSurveyProjection.Current.Anchor(grid.GridToWorldPosition(cell.x,cell.y));
+                var pin=Box(map,"Survey cell "+id,anchor,new(8,8),new(.19f,.31f,.21f),true);
+                var pinButton=pin.gameObject.AddComponent<Button>();
+                pinButton.navigation=new Navigation{mode=Navigation.Mode.None};
+                pinButton.targetGraphic=pin.GetComponent<Image>();
+                UnityEventTools.AddIntPersistentListener(pinButton.onClick,roster.UseCell,id);
+                var pinSlot=pin.gameObject.AddComponent<OsowiecPaperSlot>();
+                pinSlot.board=roster;pinSlot.index=id;
+                var tile=(RectTransform)desk.Find("Position "+id);
+                tile.SetParent(map,false);
+                tile.anchorMin=tile.anchorMax=centre;
+                tile.anchoredPosition=new Vector2(49+n*43,rowOffset);
+                tile.sizeDelta=new(41,46);
+                var ink=tile.GetComponent<Image>();
+                ink.sprite=stamp; ink.type=Image.Type.Simple; ink.preserveAspect=true;
                 var outline=tile.GetComponent<Outline>();
-                if(!outline)outline=tile.gameObject.AddComponent<Outline>();
-                outline.effectColor=new Color(.28f,.23f,.14f,.77f);outline.effectDistance=new Vector2(1.6f,-1.6f);
-                var anchor=projection.Anchor(grid.GridToWorldPosition(cells[n].x,cells[n].y));
-                var pin=Box(map,"Survey cell "+id,anchor,new(8.6f,8.6f),new(.18f,.29f,.20f),true);
-                var b=pin.gameObject.AddComponent<Button>();b.targetGraphic=pin.GetComponent<Image>();
-                b.navigation=new Navigation{mode=Navigation.Mode.None};
-                UnityEventTools.AddIntPersistentListener(b.onClick,roster.UseCell,id);
-                var interactions=pin.gameObject.AddComponent<OsowiecPaperSlot>();interactions.board=roster;interactions.index=id;
+                if(outline)Object.DestroyImmediate(outline);
+                var selectable=tile.GetComponent<Button>();
+                var palette=selectable.colors;
+                palette.highlightedColor=palette.selectedColor=new Color(1f,.72f,.45f);
+                palette.pressedColor=new Color(.75f,.52f,.34f);
+                selectable.colors=palette;
+                var face=tile.GetComponentInChildren<RawImage>(true);
+                face.rectTransform.sizeDelta=new(36,43);
+                var free=tile.GetComponentInChildren<TMP_Text>(true);
+                free.rectTransform.sizeDelta=tile.sizeDelta;
+                free.text=new[]{"I","II","III"}[n]; free.fontSize=16;
+                free.alignment=TextAlignmentOptions.Center;
+                free.color=new Color(.20f,.23f,.14f);
             }
         }
     }

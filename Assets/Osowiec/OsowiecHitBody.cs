@@ -5,6 +5,20 @@ public sealed class OsowiecHitBody : MonoBehaviour
 {
     internal bool HelmetLost { get; set; }
 
+    OsowiecHitPart wornShell;
+
+    OsowiecHitPart ProtectedZone(OsowiecHitPart head, Collider shape, Vector3 point)
+    {
+        if (HelmetLost || !(shape is CapsuleCollider capsule)) return head;
+        // The capsule axis follows the animated head. Leave the lowest third exposed.
+        float height = (head.transform.InverseTransformPoint(point).y - capsule.center.y) / capsule.height + .5f;
+        if (height < .34f) return head;
+        if (!wornShell)
+            foreach (var zone in GetComponentsInChildren<OsowiecHitPart>())
+                if (zone.area == OsowiecHitArea.Helmet) { wornShell = zone; break; }
+        return wornShell && wornShell.isActiveAndEnabled ? wornShell : head;
+    }
+
     public void SettleFall()
     {
         // Once locomotion is disabled the animated body may tilt with its own patch of ramp.
@@ -60,6 +74,8 @@ public sealed class OsowiecHitBody : MonoBehaviour
                 hit.point = ray.GetPoint(contact);
                 hit.normal = normal;
             }
+            if (zone && zone.area == OsowiecHitArea.Head && unit && unit.TryGetComponent<OsowiecHitBody>(out var body))
+                zone = body.ProtectedZone(zone, shape, hit.point);
             best = hit.distance;
             nearest = hit;
             part = zone;

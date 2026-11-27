@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 // Per-activation equipment, shared by the HUD, bot perception and FPS weapons.
 [DefaultExecutionOrder(-100)]
-public sealed class OsowiecFieldKit : MonoBehaviour
+public sealed partial class OsowiecFieldKit : MonoBehaviour
 {
     public static OsowiecFieldKit Instance { get; private set; }
     public static bool Busy(Unit u) => Instance && Instance.actor == u &&
@@ -24,17 +24,30 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         !Throwable(item) ? -1 : !u || (item==OsowiecKitItem.Gas && u.chessType!=ChessUnitType.Pawn) ||
         (item==OsowiecKitItem.Smoke && u.chessType==ChessUnitType.Pawn) || Instance && Instance.used.Contains((u,item)) ? 0 : 1;
     internal readonly OsowiecKitThrow throwing=new();
-    internal Unit ScopeTarget { get; private set; }
+    internal Unit ScopeTarget => scope ? SightedEnemy : null;
     internal Unit Marked => tagged && taggedUntil>round ? tagged : null;
     readonly OsowiecKitWheel wheel=new();
     readonly HashSet<(Unit,OsowiecKitItem)> used=new();
     OsowiecKitItem selected;
     int blockFireFrame=-1,blockLookFrame=-1;
     Vector3 scopeRest;
-    float scopeLift;
+    Transform scopeMount;
+    readonly RaycastHit[] sightHits=new RaycastHit[24];
+    internal static bool RifleSight(Unit unit)
+    {
+        if(!Instance || !unit || Instance.actor!=unit || unit.owner!=Player.Player1 ||
+           !OsowiecFireTurn.Allows(unit) || Busy(unit) || Mouse.current?.rightButton.isPressed!=true) return false;
+        var weapon=unit.GetEquippedWeapon();
+        return weapon && !weapon.IsReloading && OsowiecOperation.Instance && !OsowiecOperation.Instance.MaskOn(unit);
+    }
+    internal static float MagnifiedFov(float baseFov,float power) =>
+        2f*Mathf.Atan(Mathf.Tan(baseFov*Mathf.Deg2Rad*.5f)/power)*Mathf.Rad2Deg;
     bool wheelOnF1, chargingThrow, chargingLeap, validLeap, zoomed, spentOnMarch;
     float chargeAt;
     readonly Vector3[] leapPath = new Vector3[17];
+    int leapSamples;
+    internal int LeapSamples => leapSamples;
+    internal bool LeapClear => validLeap;
     readonly RaycastHit[] leapHits = new RaycastHit[24];
     Vector3 taggedPosition;
     readonly Dictionary<Unit,int> nextSkillTurn = new();
@@ -47,10 +60,11 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         if (!Instance || Instance.actor!=u || !Instance.spentOnMarch) return;
         Instance.spent=Instance.stopWalking=Instance.spentOnMarch=false;
     }
-    void SpendAttack()
+    void SpendAttack(bool keepWalking = false)
     {
         spentOnMarch=OsowiecMarch.Free(actor);
-        spent=stopWalking=true;
+        spent=true;
+        stopWalking=!keepWalking;
     }
     void FinishSkill() => nextSkillTurn[actor]=round+1;
     void CancelCharge() { chargingLeap=false; chargingThrow=false; }
@@ -60,8 +74,10 @@ public sealed class OsowiecFieldKit : MonoBehaviour
     public static string Feedback(Unit u) => Instance && Instance.actor==u && Time.time<Instance.feedbackUntil ? Instance.note : null;
     Coroutine jump;
     internal bool SpendThrowable(Unit unit,OsowiecKitItem item) => unit && Throwable(item) && Remaining(unit,item)>0 && used.Add((unit,item));
-    public static bool HoldPosition(Unit u) => Instance != null && Instance.actor == u &&
-        (Instance.stopWalking || Instance.scope || Instance.leaping || Instance.chargingLeap);
+    public static bool HoldPosition(Unit u) =>
+        (u.FieldTurn.RifleSpent && u.chessType != ChessUnitType.Guardian) ||
+        (Instance != null && Instance.actor == u &&
+        (Instance.stopWalking || Instance.scope || Instance.leaping || Instance.chargingLeap));
     public static string Status(Unit u) => Instance && Instance.actor==u ? Instance.note : "";
     public static bool ScopeOpen => Instance != null && Instance.scope;
     internal const float CloudRadius=3.5f;
@@ -94,7 +110,8 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         return false;
     }
 
-    internal static float GasCloudSightDepth(Vector3 from,Vector3 to)
+    internal static float GasCloudSightDepth(Vector3 from,Vector3 to) => CloudSightDepth(from,to,true);
+    static float CloudSightDepth(Vector3 from,Vector3 to,bool gas)
     {
         if(!Instance || Instance.smoke.Count==0) return 0;
         Vector3 delta=to-from;
@@ -104,7 +121,7 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         float deepest=0;
         for(int i=0;i<Instance.smoke.Count;i++)
         {
-            if(!Instance.gasKind[i]) continue;
+            if(Instance.gasKind[i]!=gas) continue;
             Vector3 offset=Instance.smoke[i]-from;
             float axis=Vector3.Dot(offset,forward);
             float chord=CloudRadius*CloudRadius-(offset-forward*axis).sqrMagnitude;
@@ -142,24 +159,27 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         if (scope && lens!=null)
         {
             lens.fieldOfView=originalFov;
-            if (lens.transform.parent && actor && lens.transform.IsChildOf(actor.transform)) lens.transform.localPosition=scopeRest;
+            if (scopeMount && lens.transform.parent==scopeMount) lens.transform.localPosition=scopeRest;
         }
-        scope=false; zoomed=false;
-        ScopeTarget=null;
+        scope=false; zoomed=false; lens=null; scopeMount=null;
+        SightedEnemy=null;markRequested=false;
     }
     void OnDisable() { wheel.Close(); CancelCharge(); CloseScope(); }
-    void OnApplicationFocus(bool focus) { if(!focus) { wheel.Close(); CancelCharge(); } }
+    void OnApplicationFocus(bool focus) { if(!focus) { wheel.Close(); CancelCharge(); CloseScope(); } }
     public static void Fired(Unit u)
     {
         if (Instance==null || Instance.actor!=u) return;
-        Instance.SpendAttack();
-        Instance.note="Выстрел произведён. Tab — передать ход.";
+        bool scout = u.chessType == ChessUnitType.Guardian;
+        Instance.SpendAttack(scout);
+        Instance.note = scout && u.GetRemainingMoveMeters() > .02f
+            ? OsowiecMenuLanguage.Text("Можно пройти оставшиеся метры.")
+            : "Выстрел произведён. Tab — передать ход.";
     }
     void Update()
     {
         var game=GameManager.Instance;
         var cameras=CameraManager.Instance;
-        if (game==null || cameras==null || game.IsPaused()) { wheel.Close(); CancelCharge(); return; }
+        if (game==null || cameras==null || game.IsPaused()) { wheel.Close(); CancelCharge(); CloseScope(); return; }
         if (game.IsBotTurn() && !previousBot) round++;
         previousBot=game.IsBotTurn();
         for(int i=smoke.Count-1;i>=0;i--)
@@ -183,32 +203,19 @@ public sealed class OsowiecFieldKit : MonoBehaviour
             CancelCharge(); actor=next; spentOnMarch=false; spent=false; stopWalking=false; leaping=false; note=""; feedbackUntil=0;
         }
 
-        if (!actor || !OsowiecFireTurn.Allows(actor) || Keyboard.current==null) { wheel.Close(); CancelCharge(); return; }
+        if (!actor || !OsowiecFireTurn.Allows(actor) || Keyboard.current==null) { wheel.Close(); CancelCharge(); CloseScope(); return; }
         var keys=Keyboard.current;
         var mouse=Mouse.current;
         bool click=mouse!=null && mouse.leftButton.wasPressedThisFrame;
         if (scope)
         {
-            if(keys.qKey.wasPressedThisFrame || keys.tKey.wasPressedThisFrame) CloseScope();
+            if(keys.qKey.wasPressedThisFrame || keys.tKey.wasPressedThisFrame || !lens || cameras.GetActionCamera()!=lens) CloseScope();
             else if(mouse!=null && Mathf.Abs(mouse.scroll.ReadValue().y)>.01f)
             {
                 zoomed=mouse.scroll.ReadValue().y>0;
-                lens.fieldOfView=zoomed?18:34;
+                lens.fieldOfView=MagnifiedFov(OsowiecFieldSettings.FieldOfView,zoomed?4:2);
             }
-            else if(click && !Cooling)
-            {
-                UpdateScopeTarget();
-                if(ScopeTarget)
-                {
-                    tagged=ScopeTarget;
-                    taggedUntil=round+2;
-                    taggedPosition=tagged.transform.position;
-                    FogWarIntelTracker.Instance?.MarkVisible(tagged,tagged.transform.position);
-                    OsowiecAtmosphere.PlayOptics(actor.transform.position);
-                    FinishSkill();
-                    note="Цель опознана. Два хода отряд наносит ей на 20% больше урона из винтовок.";
-                }
-            }
+            else if(click) markRequested=true;
             blockFireFrame=Time.frameCount;
             return;
         }
@@ -267,7 +274,7 @@ public sealed class OsowiecFieldKit : MonoBehaviour
                     OsowiecPlanner.NoteAttack(actor);
                     StartCoroutine(throwing.Fly(item,actor,particleMaterial,Impact));
                     selected=OsowiecKitItem.Rifle;
-                    OsowiecWeaponView.UsedEquipment(actor);
+                    OsowiecWeaponView.ReleaseThrowable(actor,item);
                     note="Бросок"; feedbackUntil=Time.time+1;
                 }
             }
@@ -276,7 +283,7 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         if(keys.qKey.wasPressedThisFrame && !leaping)
         {
             blockFireFrame=Time.frameCount;
-            if(Cooling) note="Снаряжение класса будет готово в следующем ходу";
+            if(Cooling && actor.chessType!=ChessUnitType.Bishop) note="Снаряжение класса будет готово в следующем ходу";
             else ClassAction();
             feedbackUntil=Time.time+2;
             return;
@@ -319,22 +326,23 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         if (actor.chessType==ChessUnitType.Guardian)
         {
             if (op.Pressure(actor)>.65f) {note="Переждите подавление в укрытии.";return;}
-            actor.SetRemainingMoveMeters(actor.GetRemainingMoveMeters()+4);
-            note="Гончая   •   Добавлено 4 м"; FinishSkill();
+            actor.SetRemainingMoveMeters(actor.GetRemainingMoveMeters()+OsowiecFieldTurn.SprintBonus);
+            note=OsowiecMenuLanguage.Text("Гончая   •   Добавлено 6 м"); FinishSkill();
             OsowiecAtmosphere.PlayPneumatic(at); return;
         }
         if (actor.chessType==ChessUnitType.Bishop)
         {
             if (op.MaskOn(actor)) {note="Снимите маску для оптики.";return;}
+            var gun=actor.GetEquippedWeapon();
+            if(gun && gun.IsReloading) {note="Дождитесь перезарядки.";return;}
             lens=CameraManager.Instance.GetActionCamera();
-            originalFov=lens.fieldOfView; scopeRest=lens.transform.localPosition;
+            if(!lens || !lens.transform.parent || !lens.transform.IsChildOf(actor.transform))return;
+            scopeMount=lens.transform.parent;scopeRest=lens.transform.localPosition;
+            originalFov=OsowiecFieldSettings.FieldOfView;
             scope=true;
-            lens.fieldOfView=34;
-            var origin=lens.transform.position;
-            scopeLift=Physics.Raycast(origin,Vector3.up,out var ceiling,1.05f,~0,QueryTriggerInteraction.Ignore)
-                ? Mathf.Max(0,ceiling.distance-.15f):1f;
-            lens.transform.position=origin+Vector3.up*scopeLift;
-            note="Наведите перископ на цель и нажмите ЛКМ.";
+            lens.fieldOfView=MagnifiedFov(originalFov,2);
+            RaiseOptic();
+            note=Cooling?"Наблюдение. Новая метка — в следующий ход.":"Наведите перископ на цель и нажмите ЛКМ.";
             OsowiecAtmosphere.PlayOptics(at); return;
         }
         chargingLeap=true;
@@ -348,22 +356,32 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         float budget=Mathf.Lerp(2,5,strength);
         if(!OsowiecMarch.Free(actor)) budget=Mathf.Min(budget,actor.GetRemainingMoveMeters());
         travel=default;
-        if(budget<1 || !NavMesh.SamplePosition(at+actor.transform.forward*budget,out var landing,1.2f,NavMesh.AllAreas)) return false;
-        travel=landing.position-at;
+        var wanted=at+actor.transform.forward*Mathf.Max(.45f,budget);
+        bool navigable=NavMesh.SamplePosition(wanted,out var landing,1.2f,NavMesh.AllAreas);
+        travel=(navigable?landing.position:wanted)-at;
         float planar=Vector3.ProjectOnPlane(travel,Vector3.up).magnitude;
-        if(planar>budget+.15f || planar<.8f || Mathf.Abs(travel.y)>1.1f) return false;
+        bool allowed=navigable && budget>=1 && planar<=budget+.15f && planar>=.8f && Mathf.Abs(travel.y)<=1.1f;
         leapPath[0]=at;
+        leapSamples=1;
         for(int i=1;i<leapPath.Length;i++)
         {
             float t=i/(float)(leapPath.Length-1);
             leapPath[i]=at+LeapOffset(travel,t);
+            leapSamples=i+1;
             Vector3 delta=leapPath[i]-leapPath[i-1];
             int found=Physics.CapsuleCastNonAlloc(leapPath[i-1]+Vector3.up*.45f,leapPath[i-1]+Vector3.up*1.55f,
                 .22f,delta.normalized,leapHits,delta.magnitude,~0,QueryTriggerInteraction.Ignore);
+            float first=float.PositiveInfinity;
             for(int h=0;h<found;h++)
-                if(!leapHits[h].transform.IsChildOf(actor.transform) && leapHits[h].normal.y<.65f) return false;
+                if(!leapHits[h].transform.IsChildOf(actor.transform) && leapHits[h].normal.y<.65f)
+                    first=Mathf.Min(first,leapHits[h].distance);
+            if(first<float.PositiveInfinity)
+            {
+                leapPath[i]=leapPath[i-1]+delta.normalized*first;
+                return false;
+            }
         }
-        return true;
+        return allowed;
     }
     static Vector3 LeapOffset(Vector3 travel,float t) => travel*t+Vector3.up*(.88f*Mathf.Sin(t*Mathf.PI));
     IEnumerator Jump(Unit jumper,Vector3 travel)
@@ -397,7 +415,9 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         }
         var origin=position+Vector3.up*.13f;
         OsowiecAtmosphere.PlayKitImpact(position,false);
-        Emit(origin,new Color(1,.77f,.24f,1),1.8f,32,.18f);
+        Emit(origin,new Color(1,.83f,.52f,.93f),.80f,OsowiecFieldSettings.ReducedEffects?2:5,.075f);
+        if(Physics.Raycast(position+Vector3.up*.65f,Vector3.down,out var floor,1.42f,~0,QueryTriggerInteraction.Ignore))
+            GroundDust(floor);
         var burst=Emit(origin,new Color(1f,.68f,.24f,.97f),.21f,0,.65f);
         var main=burst.main;
         main.startSpeed=new ParticleSystem.MinMaxCurve(2.6f,5.7f);
@@ -408,14 +428,24 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         streak.velocityScale=.11f;
         streak.lengthScale=1.5f;
         burst.Emit(OsowiecFieldSettings.ReducedEffects ? 24 : 56);
-        var debris=Emit(origin+Vector3.up*.3f,new Color(.44f,.38f,.30f,.89f),1.85f,0,1.35f);
-        var plume=debris.main; plume.startSpeed=new ParticleSystem.MinMaxCurve(.4f,1.8f);
+        var debris=Emit(origin+Vector3.up*.18f,new Color(.45f,.41f,.35f,.74f),1.5f,0,1.68f);
+        var plume=debris.main;
+        plume.startSize=new ParticleSystem.MinMaxCurve(.43f,1.17f);
+        plume.startRotation=new ParticleSystem.MinMaxCurve(0,Mathf.PI*2);
+        var size=debris.sizeOverLifetime;size.enabled=true;
+        size.size=new ParticleSystem.MinMaxCurve(1,AnimationCurve.EaseInOut(0,.56f,1,2.4f));
         var dustFade=new Gradient();
         dustFade.SetKeys(new[]{new GradientColorKey(Color.white,0),new GradientColorKey(Color.white,1)},
             new[]{new GradientAlphaKey(0,0),new GradientAlphaKey(.92f,.15f),
                 new GradientAlphaKey(.71f,.55f),new GradientAlphaKey(0,1)});
         var color=debris.colorOverLifetime; color.enabled=true; color.color=dustFade;
-        debris.Emit(OsowiecFieldSettings.ReducedEffects ? 32 : 55);
+        int billows=OsowiecFieldSettings.ReducedEffects?9:21;
+        for(int i=0;i<billows;i++)
+        {
+            float u=(i+.5f)/billows,a=i*2.39996f;
+            var velocity=new Vector3(Mathf.Cos(a)*(1-u)*2.3f,.60f+u*2.6f,Mathf.Sin(a)*(1-u)*2.3f);
+            debris.Emit(new ParticleSystem.EmitParams{velocity=velocity},1);
+        }
         if(!OsowiecFieldSettings.ReducedEffects) StartCoroutine(Flash(origin));
         if (!thrower) return;
         bool heavy=thrower.chessType==ChessUnitType.Pawn;
@@ -426,6 +456,29 @@ public sealed class OsowiecFieldKit : MonoBehaviour
             if(damage>0) unit.TakeDamage(heavy?damage:Mathf.CeilToInt(damage*.7f),thrower,false,"Граната");
         }
         StartCoroutine(Fragments(thrower,origin,heavy));
+    }
+
+    void GroundDust(RaycastHit floor)
+    {
+        var dust=Emit(floor.point+floor.normal*.075f,new Color(.50f,.44f,.34f,.55f),.52f,0,.82f);
+        dust.name="Radial ground dust";
+        var fade=dust.colorOverLifetime;fade.enabled=true;
+        var colors=new Gradient();
+        colors.SetKeys(new[]{new GradientColorKey(Color.white,0),new GradientColorKey(Color.white,1)},
+            new[]{new GradientAlphaKey(.12f,0),new GradientAlphaKey(.85f,.15f),new GradientAlphaKey(0,1)});
+        fade.color=colors;
+        var grow=dust.sizeOverLifetime;grow.enabled=true;
+        grow.size=new ParticleSystem.MinMaxCurve(1,AnimationCurve.EaseInOut(0,.45f,1,2.7f));
+        var across=Vector3.Cross(floor.normal,Mathf.Abs(floor.normal.z)<.8f?Vector3.forward:Vector3.right).normalized;
+        var along=Vector3.Cross(floor.normal,across);
+        int count=OsowiecFieldSettings.ReducedEffects?12:30;
+        for(int i=0;i<count;i++)
+        {
+            float a=i*2*Mathf.PI/count;
+            var outward=Mathf.Cos(a)*across+Mathf.Sin(a)*along;
+            dust.Emit(new ParticleSystem.EmitParams{position=outward*.18f,
+                velocity=outward*(2.9f+.53f*Mathf.Sin(i*2.73f))+floor.normal*.18f},1);
+        }
     }
 
     IEnumerator Fragments(Unit thrower,Vector3 origin,bool heavy)
@@ -541,36 +594,51 @@ public sealed class OsowiecFieldKit : MonoBehaviour
     }
     void LateUpdate()
     {
-        if(!actor) return;
-        if(scope && lens)
+        if(!actor) { SightedEnemy=null;return; }
+        if(scope)
         {
-            if(!lens.transform.parent || !lens.transform.IsChildOf(actor.transform)) { CloseScope(); return; }
-            lens.transform.position=lens.transform.parent.TransformPoint(scopeRest)+Vector3.up*scopeLift;
-            UpdateScopeTarget();
+            if(!lens || !scopeMount || lens.transform.parent!=scopeMount || !lens.transform.IsChildOf(actor.transform))
+            { CloseScope();return; }
+            RaiseOptic();
+
         }
         else if(chargingLeap) validLeap=TryLeap(Charge,out _);
         else if(!wheel.Open && !spent && Throwable(selected) && CameraManager.Instance)
             throwing.Aim(CameraManager.Instance.GetActionCamera(),actor,chargingThrow?Charge:0);
+        if(!OsowiecFireTurn.Allows(actor) || wheel.Open) { SightedEnemy=null;return; }
+        RefreshSight(CameraManager.Instance.GetActionCamera());
+        if(scope && markRequested) ApplyObservation();
+        markRequested=false;
     }
 
-    void UpdateScopeTarget()
+    float SightClearance(Vector3 origin,Vector3 direction,float distance,float radius,Unit subject=null)
     {
-        ScopeTarget=null;
-        if(!lens || !actor) return;
-        // The illuminated sight ring also accepts a nearby silhouette inside the glass.
-        float best=.056f;
-        foreach(var u in OsowiecOperation.Instance.FieldRoster)
+        var hits=sightHits;
+        int count=radius>0
+            ? Physics.SphereCastNonAlloc(origin,radius,direction,hits,distance,~0,QueryTriggerInteraction.Ignore)
+            : Physics.RaycastNonAlloc(origin,direction,hits,distance,~0,QueryTriggerInteraction.Ignore);
+        if(count==hits.Length)
         {
-            if(!u || !u.isActiveAndEnabled || u.owner==actor.owner || u.GetHealth()<=0) continue;
-            var center=u.transform.position+Vector3.up*1.22f;
-            var p=lens.WorldToViewportPoint(center);
-            float offset=new Vector2((p.x-.5f)*lens.aspect,p.y-.5f).magnitude;
-            if(p.z<=0 || p.z>70 || offset>best || Obscured(lens.transform.position,center)) continue;
-            if(Physics.Linecast(lens.transform.position,center,out var cover,~0,QueryTriggerInteraction.Ignore) &&
-                cover.collider.GetComponentInParent<Unit>()!=u) continue;
-            best=offset; ScopeTarget=u;
+            hits=radius>0 ? Physics.SphereCastAll(origin,radius,direction,distance,~0,QueryTriggerInteraction.Ignore)
+                          : Physics.RaycastAll(origin,direction,distance,~0,QueryTriggerInteraction.Ignore);
+            count=hits.Length;
         }
+        float clear=distance;
+        for(int i=0;i<count;i++)
+        {
+            var root=hits[i].transform;
+            if(root.IsChildOf(actor.transform) || (subject && root.IsChildOf(subject.transform)))continue;
+            clear=Mathf.Min(clear,hits[i].distance);
+        }
+        return clear;
     }
+    void RaiseOptic()
+    {
+        var eye=scopeMount.TransformPoint(scopeRest);
+        float lift=Mathf.Clamp(SightClearance(eye,Vector3.up,1.06f,.09f)-.06f,0,1);
+        lens.transform.position=eye+Vector3.up*lift;
+    }
+
     void OnGUI()
     {
         var game=GameManager.Instance;
@@ -579,27 +647,29 @@ public sealed class OsowiecFieldKit : MonoBehaviour
         float s=OsowiecHudPaint.Scale;
         if(IsIdentified(tagged) && !manager.IsActionMode())
         {
+            bool currentlySeen=FogWarIntelTracker.Instance && FogWarIntelTracker.Instance.IsCurrentlyVisible(tagged);
+            if(currentlySeen)taggedPosition=tagged.transform.position;
             var pixel=manager.GetTacticalCamera().WorldToScreenPoint(taggedPosition+Vector3.up*2);
-            if(pixel.z>0) OsowiecHudPaint.Plate(new Rect(pixel.x-75*s,Screen.height-pixel.y-24*s,150*s,24*s),"Место отметки",true);
+            string caption=currentlySeen?MarkLabel:OsowiecMenuLanguage.Format("Последняя позиция · {0} х.",MarkTurns);
+            if(pixel.z>0) OsowiecHudPaint.FittedPlate(new Vector2(pixel.x,Screen.height-pixel.y-40*s),caption,400*s);
         }
         if(actor==null || !manager.IsActionMode()) return;
         int depth=GUI.depth;
         GUI.depth=-50;
         if(wheel.Open) wheel.Draw(actor,wheelOnF1);
-        else if(scope) wheel.DrawScope(ScopeTarget,Cooling,ScopeTarget?Vector3.Distance(actor.transform.position,ScopeTarget.transform.position):0f,zoomed);
-        else if(chargingLeap && validLeap) OsowiecKitThrow.DrawPath(manager.GetActionCamera(),leapPath,leapPath.Length);
+        else if(scope) wheel.DrawScope(ScopeTarget,Cooling,ScopeTarget?Vector3.Distance(lens.transform.position,ScopeTarget.transform.position):0f,zoomed,SightMessage);
+        else if(RifleSight(actor)) wheel.DrawRifleSight(SightedEnemy);
+        else if(chargingLeap) OsowiecJumpReadout.Draw(manager.GetActionCamera(),leapPath,leapSamples,validLeap);
         else if(!spent && Throwable(selected)) throwing.DrawAim(manager.GetActionCamera());
         if(!scope && !wheel.Open)
         {
             wheel.DrawAbility(actor,Cooling,false);
             if(chargingLeap || Throwable(selected))
             {
-                string action=chargingLeap?(validLeap?"Отпустить Q":"Нет места для прыжка"):chargingThrow?"Отпустить ЛКМ":"Держите ЛКМ";
-                string level=chargingLeap || chargingThrow ? "   "+Mathf.RoundToInt(Charge*100)+"%" : "";
-                string cancel=chargingLeap || chargingThrow ? "   ·   "+OsowiecKitWheel.CancelName+" × Отмена" : "";
-                OsowiecHudPaint.Plate(new Rect(Screen.width*.5f-165*s,Screen.height*.67f,330*s,24*s),action+level+cancel,true);
+                wheel.DrawCharge(chargingLeap,chargingThrow,validLeap,Charge);
             }
         }
+        if(!wheel.Open)DrawSightReports(manager.GetActionCamera());
         GUI.depth=depth;
     }
 }

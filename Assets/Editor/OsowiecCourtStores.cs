@@ -216,18 +216,18 @@ public static partial class OsowiecBatteryFort
         }
     }
 
-    static void InstallYardStores(Transform root)
+    static void InstallYardStores(Transform root,bool includeApproachCover=true)
     {
         Vector3 Soil(float x,float z)=>V(x,Ground(x,z)+.025f,z);
         var mesh=new Masonry();var centre=Soil(35.94f,-2.15f);
         const float freightYaw=162;
         var goods=new Cargo(mesh,centre,freightYaw);
         goods.Chest(-.61f,0,0,1.28f,.80f,.65f,false);
-        goods.Chest(-.56f,.73f,-.025f,1.15f,.74f,.49f,true);
+        goods.Chest(-.56f,.744f,-.025f,1.15f,.74f,.49f,true);
         goods.Chest(.68f,0,-.03f,1.03f,.75f,.52f,false);
-        goods.Chest(.60f,0,.76f,.82f,.59f,.41f,false);
-        var cart=Soil(37.73f,-1.85f);
-        new Cargo(mesh,cart,-49).Handcart();
+        goods.Chest(.60f,0,.92f,.82f,.59f,.41f,false);
+        var cart=Soil(38.45f,-2.10f);
+        new Cargo(mesh,cart,8).Handcart();
         var stool=Soil(35.76f,2.89f);
         new Cargo(mesh,stool,-18).TeaBench();
         mesh.Save(root,"Battery court unloading and tea bench",false);
@@ -241,10 +241,10 @@ public static partial class OsowiecBatteryFort
         var freightRotation=Quaternion.Euler(0,freightYaw,0);
         Solid("Freight pallet",centre,freightYaw,V(2.5f,.61f,.82f));
         Solid("Upper crate",centre+freightRotation*V(-.56f,.64f,0),freightYaw,V(1.14f,.57f,.74f));
-        Solid("Side case",centre+freightRotation*V(.60f,0,.76f),freightYaw,V(.82f,.40f,.59f));
-        Solid("Handcart body",cart,-49,V(1.08f,.74f,1.04f));
+        Solid("Side case",centre+freightRotation*V(.60f,0,.92f),freightYaw,V(.82f,.40f,.59f));
+        Solid("Handcart body",cart,8,V(1.08f,.74f,1.04f));
         Solid("Tea bench",stool,-18,V(.99f,.55f,.45f));
-        InstallApproachCover(root);
+        if(includeApproachCover)InstallApproachCover(root);
     }
 
     internal static void InstallApproachCover(Transform root)

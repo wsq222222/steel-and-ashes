@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Localization-Assets-en
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Localization-Assets-en
+  m_GUID: 7e1bbb8933e9f62478fd4d3de88b02ae
+  m_SerializeEntries:
+  - m_GUID: 268e1520b76f4f6418a073a470ab9126
+    m_Address: Dispatch-en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2b48a772461e388479aadb7d87dceb87
+    m_Address: SurveySheet-en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 70d0b75762504206a9de78613ef638c5
+    m_Address: HeadquartersBackdrop-en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8d4446e030a731e40b5b01f4ded446d3
+    m_Address: Profiles-en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e9b9e893d0b5db54eb501916437ef294
+    m_Address: LedgerCover-en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 1
+  m_Settings: {fileID: 11400000, guid: 7202daaf190cd2f429d113726196b7d9, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: c3cb7fd158349094190813edd2478e25, type: 2}
+    - {fileID: 11400000, guid: 46a01533b040a244ca719dce43b4a580, type: 2}
+    - {fileID: 11400000, guid: 637a30ea733bc6d49a17954633575541, type: 2}

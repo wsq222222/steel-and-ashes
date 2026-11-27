@@ -13,7 +13,7 @@ public sealed class OsowiecKitCheck : MonoBehaviour
     string output;
     Keyboard keyboard;
     Mouse mouse;
-    Unit actor,target;
+    Unit actor,target,alternate;
     Camera eye;
     int ammo;
     bool pictures;
@@ -57,6 +57,14 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         pictures=SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null;
         GameManager.SetGameMode(GameMode.PlayerVsBot);
         report.AppendLine("Windows player "+Application.buildGUID);
+        if(Array.IndexOf(Environment.GetCommandLineArgs(),"-osowiec-optics-only")>=0)
+        {
+            yield return Deploy(1);yield return CheckOptics();
+            yield return CheckGasAndShotFeedback();
+            File.WriteAllText(Path.Combine(output,"KitCheck.txt"),report.ToString());
+            Debug.Log(report.ToString());InputSystem.RemoveDevice(mouse);InputSystem.RemoveDevice(keyboard);
+            Application.Quit(0);yield break;
+        }
         yield return Deploy(0);
         var initial=actor.transform.rotation;
         yield return Open(Key.F1);
@@ -71,6 +79,12 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         yield return Open(Key.G); yield return Point(Vector2.down);
         var smoke=OsowiecWeaponView.VisibleProp(actor,OsowiecKitItem.Gas);
         Check(smoke && smoke.activeInHierarchy && !OsowiecWeaponView.VisibleMuzzle(actor),"Hammer previews the green gas canister");
+        var paint=new MaterialPropertyBlock();
+        smoke.GetComponentInChildren<MeshRenderer>().GetPropertyBlock(paint);
+        Check(paint.GetTexture("_BaseMap")==Resources.Load<Texture2D>("OsowiecKit/Models/FieldGasFinish") &&
+            Resources.Load<Texture2D>("OsowiecKit/Gas")!=Resources.Load<Texture2D>("OsowiecKit/Smoke"),
+            "gas canister wears its printed skull and has a separate wheel pictogram");
+        yield return Capture("02b-gas-wheel");
         yield return MouseButton(MouseButtonName.Right);
         Check(!OsowiecFieldKit.WheelOpen && OsowiecFieldKit.Held(actor)==OsowiecKitItem.Bayonet,"cancel restores previous equipment");
         yield return ReleaseKey();
@@ -87,6 +101,7 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         InputSystem.QueueStateEvent(mouse,new MouseState());
         yield return null; yield return null;
         Check(OsowiecFieldKit.Held(actor)==OsowiecKitItem.Rifle && OsowiecFieldKit.Remaining(actor,OsowiecKitItem.Grenade)==1 && !OsowiecFieldKit.Busy(actor),"cancel stows the prop and preserves the charge and attack");
+        Check(OsowiecWeaponView.OnePairOfHands(actor),"cancel keeps exactly two first-person limbs");
         Check(OsowiecFieldKit.Remaining(actor,OsowiecKitItem.Gas)==1 && OsowiecFieldKit.Remaining(actor,OsowiecKitItem.Smoke)==0,"Hammer carries a gas canister plus the heavy grenade");
         yield return KeyTap(Key.H);
         yield return Throw(OsowiecKitItem.Grenade,"04");
@@ -125,34 +140,32 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         var cloud=Kit.throwing.LastImpact+Vector3.up*.5f;
         Check(OsowiecFieldKit.Obscured(cloud-Vector3.right*4,cloud+Vector3.right*4),"the deployed smoke actually obscures sight");
         yield return Deploy(1);
-        Vector3 low=eye.transform.position;
-        yield return KeyTap(Key.Q);
-        Check(OsowiecFieldKit.ScopeOpen && eye.fieldOfView<40 && eye.transform.position.y>low.y+.2f,"periscope raises the viewpoint and changes magnification");
-        var sight=target.transform.position+Vector3.up*1.22f-eye.transform.position;
-        actor.transform.rotation=Quaternion.LookRotation(Vector3.ProjectOnPlane(sight,Vector3.up));
-        float pitch=-Mathf.Asin(sight.normalized.y)*Mathf.Rad2Deg;
-        actor.ClampActionLookPitchAbsolute(pitch,pitch);
-        yield return null; yield return null;
-        Check(Kit.ScopeTarget==target,"periscope previews the visible opponent");
-        yield return Capture("06-periscope-target");
-        yield return MouseButton(MouseButtonName.Left);
-        Check(Kit.Marked==target && FogWarIntelTracker.Instance.HasIntel(target),"click marks the opponent for the tactical map");
-        yield return KeyTap(Key.Q);
-        Check(!OsowiecFieldKit.ScopeOpen && Mathf.Abs(eye.fieldOfView-OsowiecFieldSettings.FieldOfView)<.1f &&
-            eye.transform.localPosition.sqrMagnitude<.001f,"folding the periscope restores the normal FPS camera");
-        Check(!OsowiecFieldKit.Busy(actor) && OsowiecFieldKit.IsIdentified(target),"marked target and rifle action remain available");
+        yield return CheckOptics();
+        yield return CheckGasAndShotFeedback();
         yield return Deploy(2);
         float beforeDash=actor.GetRemainingMoveMeters();
         yield return KeyTap(Key.Q);
-        Check(Mathf.Abs(actor.GetRemainingMoveMeters()-beforeDash-4f)<.01f,"scout gains four playable metres");
+        Check(Mathf.Abs(actor.GetRemainingMoveMeters()-beforeDash-6f)<.01f,"scout gains six playable metres");
         yield return KeyTap(Key.Q);
-        Check(Mathf.Abs(actor.GetRemainingMoveMeters()-beforeDash-4f)<.01f,"scout cannot spend the same action twice");
+        Check(Mathf.Abs(actor.GetRemainingMoveMeters()-beforeDash-6f)<.01f,"scout cannot spend the same action twice");
         yield return Deploy(0);
         var foot=actor.transform.position;
         bool marchLeap=OsowiecMarch.Free(actor);
         float paidBefore=actor.FieldTurn.Breath(1000f)*1000f;
         float beforeLeap=actor.GetRemainingMoveMeters();
-        yield return KeyTap(Key.Q);
+        var obstruction=new GameObject("Jump QA obstruction");
+        obstruction.transform.position=actor.transform.position+actor.transform.forward*.85f+Vector3.up;
+        obstruction.transform.rotation=actor.transform.rotation;
+        obstruction.AddComponent<BoxCollider>().size=new Vector3(2.1f,3,.16f);
+        Physics.SyncTransforms();
+        InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.Q));yield return null;yield return null;
+        Check(!Kit.LeapClear && Kit.LeapSamples>=2,"obstruction produces a truncated preview and a blocked landing");
+        yield return Capture("07-blocked-jump");
+        obstruction.SetActive(false);Destroy(obstruction);Physics.SyncTransforms();
+        yield return null;yield return null;
+        Check(Kit.LeapClear && Kit.LeapSamples==17,"clear jump shows its whole playable arc");
+        yield return Capture("07b-clear-jump");
+        InputSystem.QueueStateEvent(keyboard,new KeyboardState());yield return null;yield return null;
         yield return new WaitForSeconds(.8f);
         float travelled=Vector3.ProjectOnPlane(actor.transform.position-foot,Vector3.up).magnitude;
         float cost=beforeLeap-actor.GetRemainingMoveMeters();
@@ -177,6 +190,161 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         Application.Quit(0);
     }
 
+    IEnumerator CheckOptics()
+    {
+        float normal=OsowiecFieldSettings.FieldOfView;
+        var hud=ActionModeUI.Instance;
+        Check(hud,"action reticle canvas exists");
+        InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Right));
+        yield return new WaitForSecondsRealtime(.40f);yield return null;
+        Check(OsowiecFieldKit.RifleSight(actor) && !hud.ShowsCenterDot && eye.fieldOfView<normal-1,"held RMB shows rifle sight, replaces dot and magnifies view");
+        yield return Capture("06a-rifle-sight");
+        InputSystem.QueueStateEvent(mouse,new MouseState());
+        yield return new WaitForSecondsRealtime(.40f);yield return null;
+        Check(!OsowiecFieldKit.RifleSight(actor) && Mathf.Abs(eye.fieldOfView-normal)<.65f,"RMB release restores rifle view");
+        var low=eye.transform.position;
+        var own=new GameObject("Observer's equipment collider");
+        own.transform.SetParent(actor.transform);own.transform.position=low+Vector3.up*.39f;
+        own.AddComponent<BoxCollider>().size=new Vector3(.34f,.09f,.34f);
+        Physics.SyncTransforms();
+        yield return KeyTap(Key.Q);
+        Check(OsowiecFieldKit.ScopeOpen && !hud.ShowsCenterDot && eye.fieldOfView<normal &&
+            eye.transform.position.y>low.y+.78f,"own equipment does not stop raised periscope");
+        var facing=eye.transform.rotation;
+        InputSystem.QueueDeltaStateEvent(mouse.delta,new Vector2(42,22));
+        yield return null;yield return null;
+        Check(Quaternion.Angle(eye.transform.rotation,facing)>.3f &&
+              Mathf.Abs(actor.GetActionLookPitchDegrees())>.15f,"periscope pans and tilts from mouse input");
+        float wide=eye.fieldOfView;
+        InputSystem.QueueDeltaStateEvent(mouse.scroll,new Vector2(0,120));yield return null;yield return null;
+        Check(eye.fieldOfView<wide-4,"wheel selects 4x magnification");
+        var subject=target.transform.position+Vector3.up*1.22f;
+        void AimAt(Vector3 point)
+        {
+            var delta=point-eye.transform.position;
+            actor.transform.rotation=Quaternion.LookRotation(Vector3.ProjectOnPlane(delta,Vector3.up));
+            float pitch=-Mathf.Asin(delta.normalized.y)*Mathf.Rad2Deg;
+            actor.ClampActionLookPitchAbsolute(pitch,pitch);
+        }
+        AimAt(subject);
+        var glance=subject-eye.transform.position;
+        own.transform.position=eye.transform.position+glance.normalized*.62f;
+        var parapet=GameObject.CreatePrimitive(PrimitiveType.Cube);
+        parapet.name="Periscope visibility fixture";
+        var forward=Vector3.ProjectOnPlane(glance,Vector3.up).normalized;
+        var edge=low+forward*1.05f;
+        parapet.transform.SetPositionAndRotation(edge+Vector3.down*.5f,Quaternion.LookRotation(forward));
+        parapet.transform.localScale=new Vector3(1.5f,1.25f,.14f);
+        Physics.SyncTransforms();
+        yield return null;yield return null;
+        Check(parapet.GetComponent<Collider>().Raycast(new Ray(low,(subject-low).normalized),out _,Vector3.Distance(low,subject)) && Kit.ScopeTarget==target,
+              "raised optic sees over low cover and ignores its own foreground collider");
+        parapet.transform.position+=Vector3.up*.82f;Physics.SyncTransforms();
+        yield return null;yield return null;
+        Check(!Kit.ScopeTarget,"raised solid obstruction blocks the periscope");
+        Destroy(parapet);Destroy(own);yield return null;yield return null;
+        Check(Kit.ScopeTarget==target,"unobstructed opponent returns to glass");
+        yield return Capture("06-periscope-target");
+        yield return MouseButton(MouseButtonName.Left);
+        Check(Kit.Marked==target && FogWarIntelTracker.Instance.HasIntel(target),"click marks the opponent for the tactical map");
+        yield return KeyTap(Key.Q);
+        Check(!OsowiecFieldKit.ScopeOpen && Mathf.Abs(eye.fieldOfView-normal)<.1f &&
+            eye.transform.localPosition.sqrMagnitude<.001f,"folding the periscope restores its camera mount");
+        yield return KeyTap(Key.Q);
+        Check(OsowiecFieldKit.ScopeOpen && Mathf.Abs(eye.fieldOfView-wide)<.1f,"Q reopens observation at 2x while marking cools down");
+        alternate.gameObject.SetActive(true);
+        var previous=target.transform.position;
+        Move(target,previous+Vector3.forward*2.4f,Vector3.right);
+        Move(alternate,previous,Vector3.right);
+        Physics.SyncTransforms();AimAt(alternate.transform.position+Vector3.up*1.22f);yield return null;yield return null;
+        Check(Kit.ScopeTarget==alternate,"reopened periscope inspects another silhouette");
+        yield return MouseButton(MouseButtonName.Left);
+        Check(Kit.Marked==target && actor.GetEquippedWeapon().AmmoInMag==ammo,"cooldown prevents a second mark and does not fire the rifle");
+        CameraManager.Instance.SwitchToTacticalMode();
+        yield return null;yield return null;
+        Check(!OsowiecFieldKit.ScopeOpen && !OsowiecFieldKit.RifleSight(actor) && Mathf.Abs(eye.fieldOfView-normal)<.1f,
+              "returning to tactical camera clears all optics");
+    }
+
+    IEnumerator CheckGasAndShotFeedback()
+    {
+        yield return Deploy(1);
+        var hud=ActionModeUI.Instance;
+        Vector3 Ground(float x,float z)
+        {
+            var p=Physics.RaycastAll(new Vector3(x,10,z),Vector3.down,22,~0,QueryTriggerInteraction.Ignore)
+                .First(h=>h.collider.name.StartsWith("Biebrza ground ",StringComparison.Ordinal));
+            return p.point+Vector3.up*.055f;
+        }
+        void Site(float x1,float x2,float z)
+        {
+            Move(actor,Ground(x1,z),Vector3.right);
+            Move(target,Ground(x2,z),Vector3.left);Physics.SyncTransforms();
+        }
+        Vector3 Body(OsowiecHitArea kind)=>target.GetComponentsInChildren<OsowiecHitPart>()
+            .First(p=>p.area==kind).GetComponent<Collider>().bounds.center;
+        void Look(Vector3 point)
+        {
+            var dir=point-eye.transform.position;
+            actor.transform.rotation=Quaternion.LookRotation(Vector3.ProjectOnPlane(dir,Vector3.up));
+            float pitch=-Mathf.Asin(dir.normalized.y)*Mathf.Rad2Deg;
+            actor.ClampActionLookPitchAbsolute(pitch,pitch);
+        }
+        yield return KeyTap(Key.Q);
+        actor.ClampActionLookPitchAbsolute(-75,-75);yield return null;yield return null;
+        yield return MouseButton(MouseButtonName.Left);
+        Check(!Kit.Marked && Kit.LastObservation==OsowiecObservation.Empty,"empty glass reports empty click without spending mark");
+        // At the centre, both the helmet and torso pass through opaque gas. The rim has an open line of sight at both eye heights.
+        Site(-12,8,10);
+        Look(Body(OsowiecHitArea.Torso));yield return null;yield return null;
+        Check(OsowiecFieldKit.PlayerSightAir(eye.transform.position,Body(OsowiecHitArea.Torso))==OsowiecSightState.Gas &&
+              !Kit.ScopeTarget && Kit.SightState==OsowiecSightState.Gas,"dense mission gas obscures the entire silhouette, including the helmet");
+        yield return MouseButton(MouseButtonName.Left);
+        Check(!Kit.Marked && Kit.LastObservation==OsowiecObservation.Gas,"gas denial is distinct and leaves mark available");
+        yield return Capture("06b-dense-lowland");
+        Site(-3,6,16.25f);Look(Body(OsowiecHitArea.Head));
+        yield return null;yield return null;
+        Check(OsowiecOperation.GasSightDepth(eye.transform.position,Body(OsowiecHitArea.Head))>2.25f &&
+              OsowiecFieldKit.PlayerSightAir(eye.transform.position,Body(OsowiecHitArea.Head))==OsowiecSightState.Empty &&
+              Kit.ScopeTarget==target,"upper silhouette visible along the feathered edge of actual mission gas");
+        yield return MouseButton(MouseButtonName.Left);
+        Check(Kit.Marked==target && Kit.MarkTurns==2 && Kit.MarkVisible && Kit.LastObservation==OsowiecObservation.Marked,
+              "mark acknowledgement and attached two-turn label appear");
+        yield return Capture("06c-edge-mark");
+        yield return KeyTap(Key.Q);Look(Body(OsowiecHitArea.Head));yield return null;yield return null;
+        Check(hud.SightUnit==target && hud.ShowsCenterDot && Kit.MarkVisible,"hip dot agrees on upper silhouette at gas edge");
+        InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Right));
+        yield return null;yield return null;
+        Check(OsowiecFieldKit.RifleSight(actor) && !hud.ShowsCenterDot && Kit.SightedEnemy==target &&
+              hud.SightUnit==target,"RMB and periscope agree on the same visible silhouette");
+        InputSystem.QueueStateEvent(mouse,new MouseState());yield return null;yield return null;
+        yield return KeyTap(Key.Q);
+        var middle=Vector3.Lerp(eye.transform.position,Body(OsowiecHitArea.Head),.5f);
+        Kit.Impact(OsowiecKitItem.Smoke,actor,middle-Vector3.up*.5f);
+        Look(Body(OsowiecHitArea.Head));yield return null;yield return null;
+        Check(Kit.SightState==OsowiecSightState.Smoke && !Kit.ScopeTarget && !Kit.MarkVisible,
+              "opaque thrown smoke hides the target and its live marker");
+        yield return MouseButton(MouseButtonName.Left);
+        Check(Kit.LastObservation==OsowiecObservation.Cooling && Kit.Marked==target,"cooldown click is distinct from original success");
+        yield return Deploy(0);
+        var gun=actor.GetEquippedWeapon();int health=target.GetHealth();
+        var torso=Body(OsowiecHitArea.Torso);Look(torso);yield return null;yield return null;
+        Check(gun.TryFire(actor,eye.transform.position,(torso-eye.transform.position).normalized),"released a live on-target shot");
+        Check(Kit.ConfirmedHits==1 && Kit.ConfirmedDamage==health-target.GetHealth() && Kit.ConfirmedDamage>0 &&
+              Kit.ConfirmedRemaining==target.GetHealth(),"confirmed shot displays only actual HP lost and remaining HP");
+        yield return Capture("06d-hit-confirmation");
+        // Exercise a wrapped localized name through the same actual shot and report.
+        yield return Deploy(0);gun=actor.GetEquippedWeapon();
+        JsonUtility.FromJsonOverwrite("{\"unitDisplayNameOverride\":\"Старший наблюдатель запасного караула северной галереи батареи\"}",target);
+        torso=Body(OsowiecHitArea.Torso);Look(torso);yield return null;yield return null;
+        Check(gun.TryFire(actor,eye.transform.position,(torso-eye.transform.position).normalized) && Kit.ConfirmedDamage>0,
+              "real hit report accepts a long localized unit name");
+        yield return Capture("06e-hit-long-name");
+        yield return Deploy(0);health=target.GetHealth();gun=actor.GetEquippedWeapon();
+        Check(gun.TryFire(actor,eye.transform.position,Vector3.up),"released a real miss");
+        Check(Kit.ConfirmedHits==0 && Kit.ConfirmedDamage==0 && target.GetHealth()==health,"miss cannot display damage or a hit marker");
+    }
+
     IEnumerator Deploy(int slot)
     {
         SceneManager.LoadScene("Osowiec");
@@ -188,6 +356,7 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         var units=FindObjectsByType<Unit>(FindObjectsSortMode.InstanceID);
         actor=units.First(u=>u.owner==Player.Player1);
         target=units.First(u=>u.owner==Player.Player2 && u.GetEquippedWeapon() && u.chessType==ChessUnitType.Pawn);
+        alternate=units.First(u=>u!=target && u.owner==Player.Player2 && u.GetHealth()>0 && u.GetComponent<CharacterController>());
         foreach(var u in units) if(u.owner==Player.Player2 && u!=target) u.gameObject.SetActive(false);
         // Reuse the visible, unobstructed trench fixture from the field HUD regression.
         Move(target,new Vector3(-45,.11f,-16),Vector3.right);
@@ -247,6 +416,7 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         yield return null; yield return null;
         Check(!Kit.throwing.InFlight && OsowiecFieldKit.Remaining(actor,item)==1,"holding LMB keeps the prop in hand");
         yield return new WaitForSeconds(1f);
+        Check(OsowiecWeaponView.FingersOnThrowable(actor),"charged pose has two hands, support fingertips on the ring and throwing grip on the prop");
         var expected=Kit.throwing.Landing;
         Check(Vector3.Distance(minimum,expected)>.35f,"force changes the predicted landing");
         yield return Capture(prefix+"-aim");
@@ -254,6 +424,8 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         yield return null; yield return null;
         var prop=Kit.throwing.InFlight;
         Check(prop && prop.activeInHierarchy,"released "+item+" exists in world space");
+        Check(OsowiecWeaponView.OnePairOfHands(actor) && !OsowiecWeaponView.VisibleProp(actor,item).activeInHierarchy,
+            "release has one visible pair of limbs and no second held projectile");
         var first=prop.transform.position;
         yield return new WaitForSeconds(.09f);
         yield return Capture(prefix+"-flight");

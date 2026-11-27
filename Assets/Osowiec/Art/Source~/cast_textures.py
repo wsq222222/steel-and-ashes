@@ -31,10 +31,10 @@ if "--bare-faces" in sys.argv:
     bake_uncovered_faces()
     sys.exit(0)
 if "--atlas" in sys.argv:
-    atlas = Image.new("RGB", (960, 384), (48, 47, 39))
+    atlas = Image.new("RGBA", (960, 384))
     for index, role in enumerate(("Assault", "Scout", "Support")):
         portrait = Image.open(OUT.parent / (role+"Portrait.png")).convert("RGBA")
-        atlas.paste(portrait, (index*320, 0), portrait)
+        atlas.paste(portrait, (index*320, 0))
     atlas.save(OUT.parent / "FieldPortraitAtlas.png")
     sys.exit(0)
 rng = np.random.default_rng(1916)

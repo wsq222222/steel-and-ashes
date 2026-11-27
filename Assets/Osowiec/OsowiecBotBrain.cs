@@ -131,8 +131,14 @@ public sealed class OsowiecBotBrain : MonoBehaviour, IBotMissionBrain
         if (unit != null && unit.GetHealth() > 0 && watches.TryGetValue(unit, out var watch))
         {
             watch.lastActed = turn;
+            unit.FieldTurn.Activated = true;
             bool escaping = OsowiecOperation.InGas(unit);
             bool heard = TryGetHeardSector(unit,out _);
+            bool scout = unit.chessType == ChessUnitType.Guardian;
+            float roleBudget = moveBudgetMeters;
+            if (scout && (escaping || heard || watch.visible) && OsowiecOperation.Instance.Pressure(unit) <= .65f)
+                roleBudget += OsowiecFieldTurn.SprintBonus;
+            unit.SetRemainingMoveMeters(roleBudget);
             var column = OsowiecOperation.Instance.relief;
             Vector3 cart = default;
             bool intercept = !watch.visible && !heard && column && column.SeesCart(unit,out cart);
@@ -169,9 +175,9 @@ public sealed class OsowiecBotBrain : MonoBehaviour, IBotMissionBrain
                     if (OsowiecOperation.GasAt(goal + Vector3.up * .5f))
                         goal = watch.post - offset;
                 }
-                float budget = Mathf.Min(moveBudgetMeters, escaping || heard || intercept || turn-watch.sightTurn<=2 ? 6f : 3f);
+                float budget = Mathf.Min(roleBudget, escaping || heard || intercept || turn-watch.sightTurn<=2
+                    ? (scout ? roleBudget : 6f) : 3f);
                 if (OsowiecGroundEvents.IsWarned(goal)) goal = watch.post;
-                unit.SetRemainingMoveMeters(budget);
                 if ((goal-unit.transform.position).sqrMagnitude>1.2f)
                     yield return controller.MoveTowardsWorldTargetByBudgetInternal(unit,goal,budget);
             }
@@ -191,7 +197,19 @@ public sealed class OsowiecBotBrain : MonoBehaviour, IBotMissionBrain
                 var tool=unit.GetEquippedWeapon();
                 if(tool && tool.AmmoInMag==0) tool.TryAutoReloadIfEmpty();
                 else if(!tool || (tool.CanFire() && OsowiecOperation.Instance.CanShootThisPhase(unit)))
+                {
+                    int rounds = tool ? tool.AmmoInMag : 0;
+                    Vector3 lastTarget = target.transform.position;
                     yield return controller.PerformAttackInternal(unit,target);
+                    if (scout && unit && tool && tool.AmmoInMag < rounds && unit.GetHealth() > 0 &&
+                        GameManager.Instance.TurnSequence == phase && unit.GetRemainingMoveMeters() > .1f)
+                    {
+                        Vector3 away = Vector3.ProjectOnPlane(unit.transform.position-lastTarget,Vector3.up).normalized;
+                        Vector3 goal = unit.transform.position + away * Mathf.Min(3f,unit.GetRemainingMoveMeters());
+                        if (!OsowiecGroundEvents.IsWarned(goal) && !OsowiecOperation.GasAt(goal+Vector3.up*.5f))
+                            yield return controller.MoveTowardsWorldTargetByBudgetInternal(unit,goal,unit.GetRemainingMoveMeters());
+                    }
+                }
             }
             else if (unit && unit.GetHealth() > 0 && intercept) column.TryDelayCart(unit);
         }

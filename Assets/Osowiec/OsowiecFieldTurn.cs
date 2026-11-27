@@ -4,9 +4,12 @@ using System;
 internal sealed class OsowiecFieldTurn
 {
     internal const float ObservationRange = 10f;
+    internal const float SprintBonus = 6f;
+    internal const int ShotCap = 84;
     internal bool Activated { get; set; }
     internal bool Observed { get; private set; }
     internal bool Attacked { get; private set; }
+    internal bool RifleSpent { get; private set; }
     float distanceWalked;
     bool marched, enteredCombat;
     internal float ContactNoticeUntil { get; private set; }
@@ -28,21 +31,35 @@ internal sealed class OsowiecFieldTurn
     internal bool Fire()
     {
         Attack();
+        RifleSpent = true;
         bool observed = Observed;
         Observed = false;
         return observed;
     }
 
-    internal static int ShotDamage(int damage, bool observed, float distance) =>
-        observed && distance >= ObservationRange ? damage * 2 : damage;
+    internal static int ShotDamage(int damage, OsowiecHitArea zone, bool observed, float distance,
+        bool marked, float attackerMultiplier)
+    {
+        float location = zone switch
+        {
+            OsowiecHitArea.Helmet => .30f,
+            OsowiecHitArea.Head => 1.35f,
+            OsowiecHitArea.Limb => .72f,
+            _ => 1f
+        };
+        float observation = observed && distance >= ObservationRange ? 2f : 1f;
+        float mark = marked ? 1.2f : 1f;
+        int amount = UnityEngine.Mathf.RoundToInt(damage * location * observation * mark * attackerMultiplier);
+        return UnityEngine.Mathf.Clamp(amount, 0, zone == OsowiecHitArea.Helmet ? 24 : ShotCap);
+    }
 
     internal void Finish(bool observer)
     {
-        if (Activated && observer && !Attacked) Observed = true;
+        if (Activated) Observed = observer && !Attacked && distanceWalked <= .02f;
         marched = enteredCombat = false;
         ContactNoticeUntil = 0;
         Activated = false;
-        Attacked = false;
+        Attacked = RifleSpent = false;
         distanceWalked = 0;
     }
 }

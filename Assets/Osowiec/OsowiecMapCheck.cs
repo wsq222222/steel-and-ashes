@@ -221,16 +221,24 @@ public sealed class OsowiecMapCheck : MonoBehaviour
             var pin=(RectTransform)map.Find("Survey cell "+i);
             if(Vector2.Distance(pin.anchorMin,projection.Anchor(location))>.00005f)
                 throw new InvalidOperationException("Geographic cell moved from its physical spawn "+cell);
-            foreach(var hit in new Transform[]{pin,desk.Find("Position "+i)})
+            foreach(var hit in new Transform[]{pin,map.Find("Position "+i)})
             {
                 Click(hit,false,i);
                 if(!placement.DeployedAt(cell))throw new InvalidOperationException("Did not deploy on "+cell);
+                var tile=map.Find("Position "+i);
+                var figure=tile.GetComponentInChildren<UnityEngine.UI.RawImage>();
+                var background=tile.GetComponent<UnityEngine.UI.Image>();
+                var outline=tile.GetComponent<UnityEngine.UI.Outline>();
+                if(!figure || !figure.enabled || !figure.texture ||
+                    !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.HasAlphaChannel(figure.texture.graphicsFormat) ||
+                    background.color.a>.001f || (outline && outline.enabled))
+                    throw new InvalidOperationException("Occupied position is missing its cutout figure or has a visible rectangular background "+cell);
                 Click(hit,true,i);
                 if(placement.DeployedAt(cell))throw new InvalidOperationException("Did not clear "+cell);
             }
         }
         Click(map.Find("Survey cell 0"),false,0);
-        roster.SelectOffer(1);Click(desk.Find("Position 4"),false,4);
+        roster.SelectOffer(1);Click(map.Find("Position 4"),false,4);
         yield return new WaitForEndOfFrame();SaveFrame("01-расстановка");
         roster.Confirm();for(int i=0;i<4;i++)yield return null;
         var planner=OsowiecPlanner.Instance;

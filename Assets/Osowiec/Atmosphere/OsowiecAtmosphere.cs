@@ -175,6 +175,7 @@ public sealed class OsowiecAtmosphere : MonoBehaviour
     public static bool IsInAudioVault(Vector3 position) => activeAudio != null && activeAudio.InVault(position);
     internal static void PlayContact(Vector3 position) => activeAudio?.PlayWorldCue("SignalCall", position, .62f);
     public static void PlayPneumatic(Vector3 position) => activeAudio?.PlayWorldCue("Pneumatic", position, .76f);
+    internal static void PlayReinforcement() => activeAudio?.PlayReinforcement();
     public static void PlayOptics(Vector3 position) => activeAudio?.PlayWorldCue("Optics", position, .70f);
     internal static void PlayKitImpact(Vector3 position,bool smoke)
     {

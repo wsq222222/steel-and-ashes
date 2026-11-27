@@ -371,8 +371,8 @@ public static class OsowiecArchitectureDetails
         });
         PatchScene("Assets/Osowiec/OsowiecHQ.unity",scene=>
         {
-            var room=scene.GetRootGameObjects().SelectMany(go=>go.GetComponentsInChildren<Transform>(true)).Single(t=>t.name=="Timber signal dugout");
-            BakeHQ(room);
+            var room=scene.GetRootGameObjects().FirstOrDefault(go=>go.name=="Timber signal dugout");
+            if(room) BakeHQ(room.transform); // Only the legacy timber room uses the procedural bake.
         });
         if(active.isLoaded)SceneManager.SetActiveScene(active);
         AssetDatabase.SaveAssets();

@@ -686,7 +686,9 @@ public sealed class OsowiecFieldCheck : MonoBehaviour
         Shot("13-земляной-откос",eye,face,46);
     }
 
-    void Shot(string label,Vector3 where,Vector3 focus,float fov)
+    void Shot(string label,Vector3 where,Vector3 focus,float fov) => Shot(output,label,where,focus,fov);
+
+    internal static void Shot(string output,string label,Vector3 where,Vector3 focus,float fov)
     {
         var host=new GameObject("Камера проверки");
         host.transform.SetPositionAndRotation(where,Quaternion.LookRotation(focus-where));

@@ -2,6 +2,7 @@
 
 Run Steel and Ashes > Export headquarters paper survey first.
 """
+import sys
 import ast
 import json
 import math
@@ -19,6 +20,7 @@ marks = dict(zip(survey["names"], map(point, survey["marks"])))
 starts = list(map(point, survey["deployment"]))
 assert len(marks) == 11 and len(starts) == 6
 routes = {}
+routes["central"] = [*map(point,survey["centralTrench"]), marks["phone"]]
 for item in ast.parse((source / "make_osowiec_landscape.py").read_text(encoding="utf-8-sig")).body:
     if isinstance(item, ast.Assign) and isinstance(item.targets[0], ast.Name):
         name = item.targets[0].id
@@ -43,7 +45,18 @@ light=(215,205,174); rule=(147,134,101)
 captions=[]
 def font(size, face="georgia"):
     return ImageFont.truetype(str(Path("C:/Windows/Fonts")/(face+".ttf")),size)
+english = "--en" in sys.argv
+captions_en = {
+    "Западный сбор":"Western muster", "Центральная траншея":"Central trench",
+    "Лазарет":"Field hospital","Телефон · развилка":"Telephone junction","Низина":"Lowland",
+    "Каземат":"Casemate","Стык ходов":"Trench junction","Двор батареи":"Battery yard",
+    "Бебжа":"Biebrza","С":"N","ОСОВЕЦ":"OSOWIEC","Подходы к батарее":"Battery approaches",
+    "ПОЛЕВОЙ ШТАБ":"FIELD HEADQUARTERS","Северный ввод":"North feed","Южный ввод":"South feed",
+    "Нижний ход":"Lower passage","Верхняя галерея":"Upper gallery","Траншея и каземат":"Trench and casemate",
+    "Открытая низина":"Exposed lowland","Подземный переход":"Underground passage","10 м":"10 m",
+}
 def type_at(pos, value, size, colour=ink, face="georgia", anchor="mm", halo=0):
+    if english: value=captions_en.get(value,value)
     style=font(size,face)
     draw.text(pos,value,font=style,fill=colour,anchor=anchor,
               stroke_width=halo,stroke_fill=light)
@@ -102,7 +115,7 @@ image.paste((98,84,67),(L,T,R,B),Image.fromarray(np.uint8(hatch*255)))
 draw.rectangle((L-2,T-2,R+1,B+1),outline=ink,width=3)
 draw.rectangle((L-7,T-7,R+6,B+6),outline=rule,width=1)
 
-for name in ("start","tunnel","marsh"):
+for name in ("start","tunnel","marsh","central"):
     path=[at(*p) for p in routes[name]]
     if name=="marsh":
         dashed(path,red,5,15,10)
@@ -127,10 +140,10 @@ for index in range(2):
     for p in cells:square(at(*p),green,4)
     if index==0:
         line([(x0,y0),(x0-36,y0-42),(84,y0-42)],green,2)
-        type_at((84,y0-54),"Сбор у лазарета",28,green,"georgiab","lb",2)
+        type_at((84,y0-54),"Западный сбор",28,green,"georgiab","lb",2)
     else:
-        line([(x0+6,y0),(x0-13,y0-37),(421,y0-37)],green,2)
-        type_at((421,y0-46),"Сбор у низины",28,green,"georgiab","lb",2)
+        line([(x0+6,y0),(x0-15,y0-48),(280,y0-48)],green,2)
+        type_at((280,y0-59),"Центральная траншея",28,green,"georgiab","lb",2)
 note("ward","Лазарет",(331,793),(282,791))
 note("phone","Телефон · развилка",(735,474),(699,474))
 note("lowland","Низина",(783,254),(851,254))
@@ -148,7 +161,7 @@ cx,cy=at(-56,22)
 line([(cx,cy+20),(cx,cy-17)],ink,2)
 draw.polygon([(cx,cy-21),(cx-7,cy+5),(cx,cy),(cx+7,cy+5)],fill=ink)
 type_at((cx,cy-24),"С",24,ink,"georgiab","mb")
-type_at((48,60),"ОСОВЕЦЪ",65,ink,"georgiab","lm")
+type_at((48,60),"ОСОВЕЦ",65,ink,"georgiab","lm")
 type_at((454,55),"Подходы к батарее",44,ink,"georgia","lm")
 type_at((1630,62),"ПОЛЕВОЙ ШТАБ",26,red,"georgiab","rm")
 line([(48,109),(1630,109)],ink,2)
@@ -166,7 +179,8 @@ for i in range(2):
     right=round(bx+(i+1)*scale*5)
     draw.rectangle((round(bx+i*scale*5),by,right,by+6),fill=ink if i==0 else light,outline=ink)
 type_at((1574,958),"10 м",21,ink,anchor="lm")
-image.save(source.parent/"SurveySheet.png",optimize=True)
+image.save(source.parent/("SurveySheet-en.png" if english else "SurveySheet.png"),optimize=True)
+if english: sys.exit(0)
 layout=dict(width=W,height=H,plot=dict(x=L,y=T,w=R-L,h=B-T),west=survey["left"],
             east=survey["right"],north=top,south=top-(B-T)/scale,captions=captions)
 (project/"Assets/Resources/OsowiecJournal/survey-layout.json").write_text(

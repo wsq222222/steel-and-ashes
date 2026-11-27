@@ -70,8 +70,8 @@ public sealed class OsowiecDeploymentReadout : MonoBehaviour
             UpdateSlots();
             lastPoints = remaining;
             previousSector=sectors.Sector;
-            areaTitle.text=OsowiecDeploymentSectors.Titles[sectors.Sector];
-            areaOrder.text=OsowiecDeploymentSectors.Descriptions[sectors.Sector];
+            areaTitle.text=OsowiecMenuLanguage.Text(OsowiecDeploymentSectors.Titles[sectors.Sector]);
+            areaOrder.text=OsowiecMenuLanguage.Text(OsowiecDeploymentSectors.Descriptions[sectors.Sector]);
         }
 
         if(sectors.HoverOffer>=0)

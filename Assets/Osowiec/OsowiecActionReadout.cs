@@ -17,7 +17,7 @@ public static class OsowiecActionReadout
         type.font=heading?OsowiecHudPaint.Heading:OsowiecHudPaint.Body;
         type.fontSize=Mathf.RoundToInt(size);
         type.normal.textColor=color;
-        GUI.Label(box,value,type);
+        GUI.Label(box,OsowiecMenuLanguage.Text(value),type);
     }
 
     static void Datum(float x,string label,string value,Color color)
@@ -42,7 +42,7 @@ public static class OsowiecActionReadout
         OsowiecHudPaint.Fill(new Rect(0,0,5,110),Red);
         string role=actor.chessType==ChessUnitType.Pawn?"Штурмовик":actor.chessType==ChessUnitType.Bishop?"Наблюдатель":"Разведчик";
         Print(new Rect(14,3,176,31),actor.GetUnitDisplayName(),24,Brown,true);
-        Print(new Rect(189,7,171,23),actor.FieldTurn.Observed ? "Выстрел ×2 от 10 м" : role,17,
+        Print(new Rect(189,7,171,23),actor.FieldTurn.Observed ? OsowiecMenuLanguage.Text("×2 с 10 м · до 84") : role,17,
             actor.FieldTurn.Observed ? Green : Dull);
         Print(new Rect(365,7,156,23),"Tab   Закончить ход",16,Dull);
         OsowiecHudPaint.Fill(new Rect(14,33,width-29,1),new Color(.40f,.31f,.18f,.65f));
@@ -50,16 +50,16 @@ public static class OsowiecActionReadout
         Datum(15,"ЗДОРОВЬЕ",actor.GetHealth()+" / "+actor.GetMaxHealth(),actor.GetHealth()<40?Red:Brown);
         bool free = OsowiecMarch.Free(actor);
         Datum(144, free ? "ПЕРЕДВИЖЕНИЕ" : "ОСТАЛОСЬ ХОДА",
-            free ? "Марш" : actor.GetRemainingMoveMeters().ToString("0.0")+" м", Brown);
+            free ? "Марш" : OsowiecMenuLanguage.Format("{0:0.0} м",actor.GetRemainingMoveMeters()), Brown);
         Datum(285,"ПАТРОНЫ",weapon?weapon.AmmoInMag+" / "+weapon.AmmoReserve:"—",Brown);
-        Datum(410,mask?"ФИЛЬТР · НАДЕТ":"ФИЛЬТР",Mathf.CeilToInt(filter)+" с",filter<6?Red:Green);
+        Datum(410,mask?"ФИЛЬТР · НАДЕТ":"ФИЛЬТР",OsowiecMenuLanguage.Format("{0} с",Mathf.CeilToInt(filter)),filter<6?Red:Green);
         string keys=mask?"T   Снять маску     X   Протереть":"T   Надеть маску";
         if(weapon && weapon.IsReloading) keys="Перезарядка…";
         var held=OsowiecFieldKit.Held(actor);
         if(OsowiecFieldKit.Throwable(held))
-            keys="Держите ЛКМ     "+OsowiecKitWheel.Name(held)+" ×"+OsowiecFieldKit.Remaining(actor,held);
+            keys=OsowiecMenuLanguage.Format("Держите ЛКМ     {0} ×{1}",OsowiecKitWheel.Name(held),OsowiecFieldKit.Remaining(actor,held));
         else if(held==OsowiecKitItem.Bayonet) keys="ЛКМ   Удар штыком";
-        Print(new Rect(15,81,500,24),keys+"       G / F1   Снаряжение",16,Dull);
+        Print(new Rect(15,81,500,24),OsowiecMenuLanguage.Text(keys)+"       "+OsowiecMenuLanguage.Text("G / F1   Снаряжение"),16,Dull);
         if(!browsing && !string.IsNullOrWhiteSpace(guidance))
         {
             string value=guidance;
@@ -70,12 +70,20 @@ public static class OsowiecActionReadout
             type.wordWrap=false;
         }
         float suppression = OsowiecOperation.Instance.Pressure(actor);
+        float statusY = string.IsNullOrWhiteSpace(guidance) ? -30 : -73;
+        if (!browsing && actor.FieldTurn.Observed)
+        {
+            float x = suppression >= .5f ? 164 : 0;
+            OsowiecHudPaint.Fill(new Rect(x,statusY,154,28),new Color(.13f,.18f,.12f,.94f));
+            var ink = new Color(.88f,.90f,.65f);
+            Print(new Rect(x+8,statusY,138,28),OsowiecMenuLanguage.Text("»  Наблюдение"),17,ink,true);
+        }
         if (!browsing && suppression >= .5f)
         {
             bool full = suppression >= .999f;
             float intensity = full || OsowiecFieldSettings.ReducedEffects ? 1f :
                 .7f + .3f * Mathf.Cos(Time.time * 5f);
-            float y = string.IsNullOrWhiteSpace(guidance) ? -30 : -73;
+            float y = statusY;
             OsowiecHudPaint.Fill(new Rect(0,y,159,28),new Color(.10f,.09f,.08f,.92f));
             var ink = full ? new Color(1f,.32f,.25f) : new Color(1f,.82f,.32f,intensity);
             Print(new Rect(10,y,145,28),full ? "!  Подавление" : "Подавление",18,ink);

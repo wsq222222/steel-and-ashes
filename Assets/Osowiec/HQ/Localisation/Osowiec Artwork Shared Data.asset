@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: Osowiec Artwork Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: Osowiec Artwork
+  m_TableCollectionNameGuidString: d1d2982d95fd0db4aac53a0dfc3c9a71
+  m_Entries:
+  - m_Id: 5082439680
+    m_Key: SurveySheet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8727289856
+    m_Key: Dispatch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9511624704
+    m_Key: Profiles
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10274988032
+    m_Key: LedgerCover
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12070702538752
+    m_Key: HeadquartersBackdrop
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items:
+    - rid: 6946996564925874205
+  m_KeyGenerator:
+    rid: 6946996564925874204
+  references:
+    version: 2
+    RefIds:
+    - rid: 6946996564925874204
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1795791507718
+    - rid: 6946996564925874205
+      type: {class: AssetTypeMetadata, ns: UnityEngine.Localization.Metadata, asm: Unity.Localization}
+      data:
+        m_Entries:
+        - m_KeyId: 5082439680
+          m_TableCodes:
+          - ru
+          - en
+        - m_KeyId: 8727289856
+          m_TableCodes:
+          - ru
+          - en
+        - m_KeyId: 9511624704
+          m_TableCodes:
+          - ru
+          - en
+        - m_KeyId: 10274988032
+          m_TableCodes:
+          - ru
+          - en
+        - m_KeyId: 12070702538752
+          m_TableCodes:
+          - ru
+          - en
+        m_TypeString: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null

@@ -545,6 +545,13 @@ def hands():
             m.tube([(x,a.y-.009,z),(x,a.y-.005,z+.0005)],[.0016,.0012],"Canvas",None,6)
         ob=m.finish("FieldGlove"+side)
         result.append(ob)
+        for label, pos in [("Cuff",start),("Grip",wrist+Vector((0,-.049,-.004)))]:
+            marker=bpy.data.objects.new("Field"+label+side,None)
+            bpy.context.collection.objects.link(marker)
+            marker.parent=ob
+            marker.location=pos
+            marker.empty_display_size=.012
+            result.append(marker)
     return result
 
 def save_export(name,objs,animate=False):
@@ -580,7 +587,9 @@ def render_portrait(role):
 
 if __name__=="__main__":
     portraits="portraits" in sys.argv
-    if portraits:
+    if "hands-only" in sys.argv:
+        clear(); save_export("FieldHands",hands())
+    elif portraits:
         for i,n in enumerate(ROLES):
             bpy.ops.wm.open_mainfile(filepath=str(SRC/(n+".blend")));render_portrait(i)
     else:

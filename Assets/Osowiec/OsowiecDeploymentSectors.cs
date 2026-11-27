@@ -5,15 +5,15 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
-// Positions are surveyed in ChessGrid coordinates, at the ward and outside the lowland.
+// Surveyed grid cells above the western and central trench floors.
 public sealed class OsowiecDeploymentSectors : MonoBehaviour
 {
     public static readonly Vector2Int[][] Cells = {
         new[] { new Vector2Int(23,22), new Vector2Int(25,22), new Vector2Int(24,23) },
-        new[] { new Vector2Int(36,37), new Vector2Int(38,37), new Vector2Int(37,39) }
+        new[] { new Vector2Int(29,34), new Vector2Int(30,33), new Vector2Int(31,34) }
     };
-    public static readonly string[] Titles = { "Западный ход", "У низины" };
-    public static readonly string[] Descriptions = { "От лазарета вперёд, до последнего поворота к телефону.", "Северный подход, у края низины." };
+    public static readonly string[] Titles = { "Западный ход", "Центральная траншея" };
+    public static readonly string[] Descriptions = { "От лазарета вперёд, до последнего поворота к телефону.", "По настилу до изгиба траншеи, затем направо к телефону." };
     public int Sector { get; private set; }
     public Vector2Int[] Current => Cells[Sector];
     public static int IndexOf(Vector2Int cell)

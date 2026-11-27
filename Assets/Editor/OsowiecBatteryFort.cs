@@ -223,9 +223,17 @@ public static partial class OsowiecBatteryFort
             foreach(int side in new[]{-1,1})
             {
                 float height=level?1.66f:.92f;
-                var centre=(from+to)*.5f+R*(side*1.70f)+U*(height*.5f-.06f);
-                stone.Box(Finish.Brick,centre,R*.35f,U*height,span);
-                stone.Box(Finish.Concrete,centre+U*(height*.5f),R*.40f,U*.11f,span);
+                // Open the courtyard side at both ramp heads to the transverse stone landings.
+                Vector3 wallStart=from, wallEnd=to;
+                if (side<0 && !level)
+                {
+                    if(from.z<0) wallStart=Vector3.Lerp(from,to,1.65f/span.z);
+                    else wallEnd=Vector3.Lerp(to,from,1.65f/span.z);
+                }
+                var wallSpan=wallEnd-wallStart;
+                var centre=(wallStart+wallEnd)*.5f+R*(side*1.70f)+U*(height*.5f-.06f);
+                stone.Box(Finish.Brick,centre,R*.35f,U*height,wallSpan);
+                stone.Box(Finish.Concrete,centre+U*(height*.5f),R*.40f,U*.11f,wallSpan);
             }
             from=to;
         }
@@ -580,6 +588,7 @@ public static partial class OsowiecBatteryFort
         galleryCover.Save(root,"Battery gallery roof");
         bank.Save(root,"Battery gallery earthwork");
         InstallStores(root);
+        DressPassageApproaches(fort,root,south,north);
         InstallRimDebris(fort,root);
         OsowiecBatteryFinish.Install(fort,root);
         var cutaway=fort.GetComponent<OsowiecFortCutaway>();

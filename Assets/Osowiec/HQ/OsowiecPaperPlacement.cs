@@ -1,4 +1,5 @@
 using TMPro;
+using static OsowiecMenuLanguage;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -14,17 +15,16 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
     [SerializeField] Button confirm, fieldConfirm;
     [SerializeField] TMP_Text budgetLabel, detail, feedback;
     [SerializeField] Image[] rows, tokens;
-    Image[] fieldPins;
     [SerializeField] RawImage[] portraits;
     [SerializeField] TMP_Text[] freeLabels;
     [SerializeField] RawImage dragToken;
     [SerializeField] int budget;
     int selected, focusedCell=-1;
+    internal int SelectedOffer=>selected;
     int hoveredOffer=-1, focusedOffer=-1;
     bool dragging;
     int lastSupply=-1;
 
-    static readonly Color Ink=new(.30f,.24f,.16f);
     static readonly Color Paper=new(.83f,.72f,.51f);
     static readonly Color Blank=new(.70f,.60f,.43f,.38f);
 
@@ -40,10 +40,21 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
 
     void Start(){
         if(!sheet)return;
+        // Invisible button backgrounds still receive remove/replace clicks on the full cell.
+        foreach(var token in tokens) token.canvasRenderer.cullTransparentMesh=false;
         SelectOffer(0);
         rows[0].GetComponent<Button>().Select();
     }
-    void OnDisable(){ dragging=false; if(dragToken) dragToken.gameObject.SetActive(false); }
+    void OnEnable()=>OsowiecMenuLanguage.Changed+=RefreshLanguage;
+    void RefreshLanguage()
+    {
+        if(!sheet || !deployment || !deployment.Sectors)return;
+        DescribeOffer(selected);
+        surveyTitle.text=Text(OsowiecDeploymentSectors.Titles[deployment.Sectors.Sector]);
+        feedback.text=Text("Выберите бойца и укажите место на карте.");
+        Refresh();
+    }
+    void OnDisable(){ OsowiecMenuLanguage.Changed-=RefreshLanguage; dragging=false; if(dragToken) dragToken.gameObject.SetActive(false); }
     public void Show(){
         if(survey)survey.SetActive(false);
         sheet.SetActive(true);
@@ -56,12 +67,12 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
         sheet.SetActive(false);
         survey.SetActive(true);
         deployment.Sectors.ShowPositions();
-        surveyTitle.text=OsowiecDeploymentSectors.Titles[deployment.Sectors.Sector];
+        surveyTitle.text=Text(OsowiecDeploymentSectors.Titles[deployment.Sectors.Sector]);
         survey.GetComponentInChildren<Button>().Select();
     }
     public void NextSector(){
         deployment.Sectors.Switch();
-        surveyTitle.text=OsowiecDeploymentSectors.Titles[deployment.Sectors.Sector];
+        surveyTitle.text=Text(OsowiecDeploymentSectors.Titles[deployment.Sectors.Sector]);
     }
     public void Headquarters(){
         Time.timeScale=1f;
@@ -69,7 +80,7 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
     }
     public void Confirm(){
         if(fieldConfirm && fieldConfirm.interactable){fieldConfirm.onClick.Invoke();return;}
-        feedback.text="Сначала выберите бойца и укажите свободное место со знаком +.";
+        feedback.text=Text("Сначала выберите бойца и укажите свободную позицию на карте.");
     }
 
     static void StepFocus(GameObject panel,bool backwards){
@@ -87,8 +98,8 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
     public void FocusCell(int index){
         focusedCell=index;
         var unit=deployment.DeployedAt(Cell(index));
-        feedback.text=unit?$"{unit.GetUnitDisplayName()} · правая кнопка или Delete, чтобы снять бойца.":
-            "Свободное место. Щёлкните или нажмите Enter, чтобы поставить выбранного бойца.";
+        feedback.text=unit?Format("{0} · правая кнопка или Delete, чтобы снять бойца.",Text(unit.GetUnitDisplayName())):
+            Text("Свободное место. Щёлкните или нажмите Enter, чтобы поставить выбранного бойца.");
     }
 
     public void SelectOffer(int offer)
@@ -105,7 +116,7 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
             var kit=unit.GetComponent<OsowiecCastMotion>();
             string ability=kit?kit.PerkDescription(unit.chessType):"";
             string role=unit.chessType switch {ChessUnitType.Pawn=>"Штурмовик",ChessUnitType.Bishop=>"Наблюдатель",_=>"Разведчик"};
-            detail.text=$"{unit.GetUnitDisplayName()} · {role} · {OsowiecPlanner.MoveBudget(unit):0} м\n{ability}";
+            detail.text=Format("{0} · {1} · {2:0} м\n{3}",Text(unit.GetUnitDisplayName()),Text(role),OsowiecPlanner.MoveBudget(unit),Text(ability));
         }
     }
     public void BeginDrag(int offer,PointerEventData data)
@@ -129,7 +140,7 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
     }
     static Rect Portrait(int offer)
     {
-        return new Rect(offer/3f+.047f,0,.24f,1);
+        return new Rect(offer/3f,0,1f/3f,1);
     }
 
     public void UseCell(int index)
@@ -138,16 +149,16 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
         var cell=Cell(index);
         bool replace=Keyboard.current?.shiftKey.isPressed==true;
         string issue=deployment.PlacementIssue(selected,cell,replace);
-        if(issue.Length>0){feedback.text=issue; return;}
+        if(issue.Length>0){feedback.text=Text(issue); return;}
         if(deployment.TryPlaceOfferAtGridCell(selected,cell,replace))
-            feedback.text=$"Позиция занята   ·   {OsowiecDeploymentSectors.Titles[index/OsowiecDeploymentSectors.Cells[0].Length].ToLowerInvariant()}";
+            feedback.text=Format("Позиция занята   ·   {0}",Text(OsowiecDeploymentSectors.Titles[index/OsowiecDeploymentSectors.Cells[0].Length]));
         Refresh();
     }
     public void Remove(int index)
     {
         focusedCell=index;
         var occupant=deployment.DeployedAt(Cell(index));
-        if(occupant){deployment.RemoveDeployedUnit(occupant); feedback.text="Боец возвращён в резерв";}
+        if(occupant){deployment.RemoveDeployedUnit(occupant); feedback.text=Text("Боец возвращён в резерв");}
         Refresh();
     }
     public void ResetRoster()
@@ -156,7 +167,7 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
             var occupant=deployment.DeployedAt(Cell(i));
             if(occupant) deployment.RemoveDeployedUnit(occupant);
         }
-        feedback.text="Расстановка очищена"; Refresh();
+        feedback.text=Text("Расстановка очищена"); Refresh();
     }
     void Update()
     {
@@ -189,29 +200,24 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
     void Refresh()
     {
         if(!deployment || !GameManager.Instance || !GameManager.Instance.IsArmyDeploymentPhase())return;
-        if(fieldPins==null)
-        {
-            fieldPins=new Image[tokens.Length];
-            var plan=sheet.transform.Find("Survey desk/Plan of the operation");
-            if(plan)foreach(var slot in plan.GetComponentsInChildren<OsowiecPaperSlot>(true))
-                fieldPins[slot.index]=slot.GetComponent<Image>();
-        }
         int count=0;
         for(int i=0;i<tokens.Length;i++)
         {
             var unit=deployment.DeployedAt(Cell(i));
             var image=portraits[i]; image.enabled=unit!=null; freeLabels[i].enabled=unit==null;
-            tokens[i].color=unit?Ink:Paper;
-            if(fieldPins[i])fieldPins[i].color=unit?new Color(.59f,.18f,.10f):new Color(.19f,.31f,.21f);
+            tokens[i].color=unit?Color.clear:Color.white;
+            var outline=tokens[i].GetComponent<Outline>();
+            if(outline)outline.enabled=!unit;
             if(!unit)continue;
             count++;
             int column=unit.chessType switch{ChessUnitType.Pawn=>0,ChessUnitType.Bishop=>1,_=>2};
-            image.uvRect=new Rect(column/3f+.047f,0,.24f,1);
+            image.uvRect=Portrait(column);
         }
         for(int i=0;i<rows.Length;i++)rows[i].color=i==selected?new Color(.69f,.60f,.44f):Blank;
-        budgetLabel.text=$"Снабжение  {deployment.GetPointsRemaining()} / {budget}     Бойцов  {count}";
+        budgetLabel.text=Format("Снабжение  {0} / {1}     Бойцов  {2}",deployment.GetPointsRemaining(),budget,count);
         lastSupply=deployment.GetPointsRemaining();
-        if(requirement)requirement.text=count==0?"Для начала поставьте хотя бы одного бойца.":"";
+        if(requirement)requirement.text=count==0?Text("Для начала поставьте хотя бы одного бойца."):"";
         confirm.targetGraphic.color=count==0?new Color(.37f,.31f,.24f):new Color(.39f,.13f,.09f);
     }
 }
+

@@ -1,5 +1,6 @@
 Shader "Steel and Ashes/Biebrza River"
 {
+    Properties { [NoScaleOffset] _FlowSurvey("Channel tangent and arc distance",2D)="white"{} }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry+30" }
@@ -17,13 +18,27 @@ Shader "Steel and Ashes/Biebrza River"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             float _OsowiecLandscapeLow;
             float _OsowiecWaterSkyTurn;
+            float _OsowiecReviewSuppressRainRings;
             TEXTURE2D(_OsowiecWaterSky); SAMPLER(sampler_OsowiecWaterSky);
+            TEXTURE2D(_FlowSurvey); SAMPLER(sampler_FlowSurvey);
+            float3 channel(float2 world)
+            {
+                float4 map=SAMPLE_TEXTURE2D_LOD(_FlowSurvey,sampler_FlowSurvey,world/float2(580,250)+.5,0);
+                return float3(normalize(map.rg*2.-1.), dot(map.ba,float2(65280.,255.))/64.);
+            }
+            float wavePhase(float arc,float2 p,float current)
+            {
+                return arc*2.42+sin(p.x*.31+p.y*.19)*.53-_Time.y*lerp(.8,2.65,current);
+            }
             struct Vertex { float4 position:POSITION; half4 data:COLOR; };
             struct Pixel { float4 clip:SV_POSITION; float3 world:TEXCOORD0; half3 water:TEXCOORD1; };
             Pixel Vert(Vertex v)
             {
                 Pixel o;
                 o.world=TransformObjectToWorld(v.position.xyz);
+                float3 course=channel(o.world.xz);
+                float w=wavePhase(course.z,o.world.xz,v.data.g);
+                o.world.y+=smoothstep(.04,.72,v.data.r)*lerp(.18,1.,v.data.g)*(.047*sin(w)+.017*sin(w*1.57+.8));
                 o.clip=TransformWorldToHClip(o.world);
                 o.water=half3(v.data.rg,ComputeFogFactor(o.clip.z));
                 return o;
@@ -63,26 +78,40 @@ Shader "Steel and Ashes/Biebrza River"
                 float filtered=1.-smoothstep(.06,.19,footprint);
                 return offset*(rcp(max(.008,radius))*sin(front)*envelope*filtered);
             }
+            // Tilt short wind ripples across each other, breaking the crests into
+            // patches. The two advected samples wrap without stretching at a bend.
+            float3 ripples(float2 p, float detail)
+            {
+                float2 a=float2(.89,.45),b=float2(-.45,.89);
+                float3 wobble=waterNoise(p*.61+float2(7.8,19.6));
+                float2 uv=float2(dot(p,a)*1.12,dot(p,b)*2.85);
+                float3 wave=waterNoise(uv+float2(wobble.x*.79,wobble.x*1.41));
+                float2 s=.115*wave.y*a+.195*wave.z*b;
+                if(detail>.001)
+                {
+                    float3 fine=waterNoise(float2(dot(p,b)*3.24,dot(p,a)*6.13)+wave.x*1.27);
+                    s+=detail*(.065*fine.y*b+.092*fine.z*a);
+                }
+                return float3(s,wave.x);
+            }
             half4 Frag(Pixel i):SV_Target
             {
                 float2 p=i.world.xz;
                 float current=i.water.y;
-                float t=_Time.y*(.025+.095*current);
-                float2 flow=p-float2(.74,-.43)*t;
+                float3 course=channel(p);
                 float3 pools=waterNoise(p*.089+float2(13.8,24.1));
-                float2 reach=float2(dot(flow,float2(.43,.14)),dot(flow,float2(-.29,.89)));
-                float3 broad=waterNoise(reach+pools.x*.71);
-                float2 slope=broad.y*float2(.028,.009)+broad.z*float2(-.020,.057);
+                float phase=frac(_Time.y*.213);
+                float2 drift=course.xy*lerp(.50,4.50,current);
                 float footprint=max(length(ddx(p)),length(ddy(p)));
-                float closeDetail=1.-smoothstep(.045,.30,footprint);
+                float closeDetail=1.-smoothstep(.035,.22,footprint);
+                float3 waves=lerp(ripples(p-drift*(phase-.5),closeDetail),
+                    ripples(p-drift*(frac(phase+.5)-.5),closeDetail),abs(phase*2.-1.));
+                float wave=wavePhase(course.z,p,current)+waterNoise(p*.34).x*1.7;
+                float depthWeight=smoothstep(.04,.72,i.water.x)*lerp(.18,1.,current);
+                float2 slope=waves.xy*lerp(.53,1.,i.water.x)
+                    -course.xy*depthWeight*(.049*cos(wave)+.028*cos(wave*1.57+.8));
                 if(_OsowiecLandscapeLow<.5 && closeDetail>.001)
-                {
-                    float2 r=flow+float2(-.37,.28)*t;
-                    float2 fineUV=float2(dot(r,float2(1.9,-1.2)),dot(r,float2(2.3,3.7)));
-                    float3 fine=waterNoise(fineUV+float2(broad.x,pools.x)*1.17);
-                    slope+=closeDetail*(fine.y*float2(.014,-.009)+fine.z*float2(.016,.026));
-                    slope+=.023*closeDetail*rainSlope(p*2.4,_Time.y);
-                }
+                    slope+=(1.-_OsowiecReviewSuppressRainRings)*.023*closeDetail*rainSlope(p*2.4,_Time.y);
                 half3 n=normalize(half3(slope.x,1.,slope.y));
                 half3 view=GetWorldSpaceNormalizeViewDir(i.world);
                 half3 ray=reflect(-view,n);
@@ -102,8 +131,12 @@ Shader "Steel and Ashes/Biebrza River"
                 Light light=GetMainLight(TransformWorldToShadowCoord(i.world));
                 half fres=.19h+.61h*pow(1-saturate(dot(n,view)),2.6h);
                 half3 reflected=lerp(bed,sky,fres*lerp(.68h,1.h,depth));
-                half sheen=pow(saturate(dot(ray,light.direction)),34)*.038h;
+                half sheen=pow(saturate(dot(ray,light.direction)),29)*.11h;
                 half3 col=reflected*(.80+.20*light.shadowAttenuation)+light.color*sheen*light.shadowAttenuation;
+                half brokenGlint=saturate(dot(slope,half2(.50,-.86))+.035)*lerp(.70,1.,depth);
+                col+=half3(.29,.32,.31)*brokenGlint;
+                half shallow=(1.-depth)*smoothstep(.58,.88,waves.z)*saturate(length(slope)*3.);
+                col+=half3(.052,.044,.031)*shallow;
                 return half4(MixFog(col,i.water.z),1);
             }
             ENDHLSL

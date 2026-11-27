@@ -18,7 +18,7 @@ MonoBehaviour:
     m_Bits: 8
   friendlyFire: 0
   isMarksmanRifle: 0
-  damagePerHit: 12
+  damagePerHit: 46
   secondsBetweenShots: 0.45
   rpm: 0
   magazineSize: 5

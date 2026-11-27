@@ -157,6 +157,16 @@ public sealed class OsowiecDefeatSmoke : MonoBehaviour
                 switch(routeFrame++)
                 {
                     case 0:
+                        if(expectedEntry=="Через каземат")
+                        {
+                            var reported=OsowiecOperation.Instance.relief;
+                            float shownUntil=reported.ReinforcementNoticeUntil;
+                            reported.SoundAlarm();
+                            Check(reported.ReinforcementCalls==1 && shownUntil-Time.time>5 &&
+                                reported.ReinforcementNoticeUntil==shownUntil &&
+                                Resources.Load<AudioClip>("OsowiecSound/ReinforcementBugle"),
+                                "repeated alarm leaves one extended reinforcement notice and one bugle trigger");
+                        }
                         squad[0].transform.position=OsowiecOperation.Casemate;
                         squad[1].transform.position=OsowiecOperation.Lowland;
                         break;

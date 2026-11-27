@@ -1,0 +1,979 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: Osowiec UI_en
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: f584d79b7fff5ef48b455ac99de36667, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 3635404800
+    m_Localized: Osowiec
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3694125056
+    m_Localized: OSOWIEC
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319360
+    m_Localized: "Osowiec  \xB7  Field headquarters"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319361
+    m_Localized: FORTRESS HEADQUARTERS   /   FIELD ORDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319362
+    m_Localized: Go to the command table
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319363
+    m_Localized: Deploy squad
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319364
+    m_Localized: 'Back to deployment  [Esc]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319365
+    m_Localized: Return to headquarters
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319366
+    m_Localized: Continue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319367
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319368
+    m_Localized: Quit game
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319369
+    m_Localized: Done
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319370
+    m_Localized: Quit the game?
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319371
+    m_Localized: Stay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319372
+    m_Localized: "Language \xB7 English"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319373
+    m_Localized: FIELD JOURNAL
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319374
+    m_Localized: "Fort I   \xB7   Osowiec"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319375
+    m_Localized: Pause
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319376
+    m_Localized: Audio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319377
+    m_Localized: Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319378
+    m_Localized: Video
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319379
+    m_Localized: Controls
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319380
+    m_Localized: Music
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319381
+    m_Localized: Effects and footsteps
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319382
+    m_Localized: Ambience
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319383
+    m_Localized: Interface sounds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319384
+    m_Localized: Field of view
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319385
+    m_Localized: Graphics quality
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319386
+    m_Localized: Interface scale
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319387
+    m_Localized: Fullscreen
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319388
+    m_Localized: Reduce effects
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319389
+    m_Localized: Reduce camera shake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319390
+    m_Localized: Mouse sensitivity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319391
+    m_Localized: Invert vertical look
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319392
+    m_Localized: Field event subtitles
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319393
+    m_Localized: 'W A S D    Move
+
+      E    Interact
+
+      R    Reload
+
+      M    Fortress map     J    Objectives
+
+      Tab    End turn'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319394
+    m_Localized: WASD  Walk     ESC  Pause
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319395
+    m_Localized: '[E]  Open operations map'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319396
+    m_Localized: '[E]  Stop gramophone'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319397
+    m_Localized: '[E]  Play gramophone'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319398
+    m_Localized: Cancel throw or jump      {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319399
+    m_Localized: Contact with the battery has been lost. Reach the junction and call headquarters. Restore both feeds, escort three wagons to the hospital and hold the battery.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319400
+    m_Localized: A trench leads from the hospital to the telephone. The lowland muster point is closer, but a mask is essential there. A charge at the casemate door [E] will raise the alarm.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319401
+    m_Localized: Restart
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319402
+    m_Localized: Return to headquarters
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319403
+    m_Localized: 'Objectives   [J]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319404
+    m_Localized: Objectives
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319405
+    m_Localized: Close journal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319406
+    m_Localized: Medical convoy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319407
+    m_Localized: Reset
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319408
+    m_Localized: PERSONNEL ROLL
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319409
+    m_Localized: Deployment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319410
+    m_Localized: Start operation
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319411
+    m_Localized: Choose a soldier, then select a position on the map.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319412
+    m_Localized: Deploy at least one soldier to begin.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319413
+    m_Localized: Survey terrain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319414
+    m_Localized: Hammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319415
+    m_Localized: Cyclops
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319416
+    m_Localized: Hound
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319417
+    m_Localized: Assault
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319418
+    m_Localized: Observer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319419
+    m_Localized: Scout
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319420
+    m_Localized: 'Switch sector  [Q]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319421
+    m_Localized: 'Switch sector   [Q]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3698319422
+    m_Localized: "WASD \u2014 pan    Wheel \u2014 zoom"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513664
+    m_Localized: At the hospital
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513665
+    m_Localized: Western approach
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513666
+    m_Localized: By the lowland
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513667
+    m_Localized: Select a soldier and choose an empty + position.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513668
+    m_Localized: "{0} \xB7 right-click or press Delete to remove."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513669
+    m_Localized: Empty position. Click or press Enter to deploy the selected soldier.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513670
+    m_Localized: "{0} \xB7 {1} \xB7 {2:0} m\n{3}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513671
+    m_Localized: Hold Q to set jump distance. Release to jump or clear wire. You can still fire.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513672
+    m_Localized: "Press Q to raise the periscope. Left-click to mark a target for two turns and increase the squad\u2019s rifle damage against it by 20%. After a turn without attacking, your next shot from 10 m deals double damage."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513673
+    m_Localized: Press Q for 4 m of extra movement. You can still fire this turn.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513674
+    m_Localized: "Deployed   \xB7   {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513675
+    m_Localized: Soldier returned to reserve
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513676
+    m_Localized: Deployment cleared
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513677
+    m_Localized: Supply  {0} / {1}     Troops  {2}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513678
+    m_Localized: Choose a marked position
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513679
+    m_Localized: "Occupied \xB7 right-click to remove, Shift to replace"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513680
+    m_Localized: Insufficient supply
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513681
+    m_Localized: Role limit reached
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513682
+    m_Localized: Display
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513683
+    m_Localized: Detail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513684
+    m_Localized: Camera
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513685
+    m_Localized: Off
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513686
+    m_Localized: On
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513687
+    m_Localized: Display mode
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513688
+    m_Localized: Windowed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513689
+    m_Localized: Borderless
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513690
+    m_Localized: Resolution
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513691
+    m_Localized: Vertical sync
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513692
+    m_Localized: Frame rate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513693
+    m_Localized: Monitor refresh
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513694
+    m_Localized: Unlimited
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513695
+    m_Localized: Apply display mode
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513696
+    m_Localized: Keep
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513697
+    m_Localized: Revert
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513698
+    m_Localized: Window size was set at launch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513699
+    m_Localized: Confirm the new display mode after applying.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513700
+    m_Localized: Render scale
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513701
+    m_Localized: Terrain detail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513702
+    m_Localized: Sun shadows
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513703
+    m_Localized: Shadow distance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513704
+    m_Localized: Anti-aliasing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513705
+    m_Localized: Textures
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513706
+    m_Localized: Full
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513707
+    m_Localized: Half size
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513708
+    m_Localized: Quarter size
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513709
+    m_Localized: Field of view
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513710
+    m_Localized: Brightness
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513711
+    m_Localized: Interface size
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513712
+    m_Localized: Weather effects
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513713
+    m_Localized: Reduced
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513714
+    m_Localized: Camera shake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513715
+    m_Localized: Low
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513716
+    m_Localized: Normal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513717
+    m_Localized: Restore defaults
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513718
+    m_Localized: Reverting in {0} s
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513719
+    m_Localized: '{0} m'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513720
+    m_Localized: Evacuation will start once contact with the battery is restored.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513721
+    m_Localized: FIELD ORDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513722
+    m_Localized: Report
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513723
+    m_Localized: Replay operation
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513724
+    m_Localized: Operation outcome
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513725
+    m_Localized: BRIEFING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513726
+    m_Localized: Register
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513727
+    m_Localized: Victory
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513728
+    m_Localized: MAIN MENU
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513729
+    m_Localized: SELECT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513730
+    m_Localized: SOUND
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513731
+    m_Localized: MISSIONS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513732
+    m_Localized: MUSIC
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513733
+    m_Localized: BACK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513734
+    m_Localized: SETTINGS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513735
+    m_Localized: APPLY
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513736
+    m_Localized: CONTINUE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513737
+    m_Localized: PERSONNEL
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513738
+    m_Localized: DEPLOYMENT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513739
+    m_Localized: APPROACH SECTOR
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513740
+    m_Localized: REMAINING SUPPLY
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513741
+    m_Localized: OPERATIONS OFFICE   /   FORT I
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513742
+    m_Localized: MOVEMENT ORDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513743
+    m_Localized: FIELD RECORD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513744
+    m_Localized: Positions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513745
+    m_Localized: Squad deployment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513746
+    m_Localized: Confirm squad
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513747
+    m_Localized: Sound volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513748
+    m_Localized: Music volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3702513749
+    m_Localized: Defeat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 51949515825152
+    m_Localized: The western trench leads from the field hospital to the telephone. From the central trench, follow the duckboards to the junction. Wear a mask in the lowland beyond the telephone. A charge at the casemate door [E] will raise the alarm.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 51949582934016
+    m_Localized: Central trench
+    m_Metadata:
+      m_Items: []
+  - m_Id: 51949582934017
+    m_Localized: From the field hospital, follow the trench to the last turn before the telephone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 51949582934018
+    m_Localized: Follow the duckboards through the bend, then turn right for the telephone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 51949582934019
+    m_Localized: Select a soldier and choose an open position on the map.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219725246464
+    m_Localized: Q opens the periscope. Left-click to mark an enemy for two turns (+20% rifle damage). Spend your activation without moving or attacking to double your next shot from 10 m. Maximum damage is 84, or 24 on a helmet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219813326848
+    m_Localized: Q adds 6 m. After firing, Hound can spend the rest of her movement. One shot per turn.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521152
+    m_Localized: "\xBB  Observation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521153
+    m_Localized: "\xD72 at 10 m \xB7 max 84"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521154
+    m_Localized: "Hound   \u2022   Added 6 m"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521155
+    m_Localized: You can spend your remaining movement.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521156
+    m_Localized: Pneumatic leap
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521157
+    m_Localized: Periscope
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521158
+    m_Localized: Dash
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521159
+    m_Localized: "Q \xB7 Stow"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521160
+    m_Localized: "Q \xB7 Observe"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521161
+    m_Localized: Next turn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521162
+    m_Localized: Hold Q
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521163
+    m_Localized: "Q \xB7 Use"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521164
+    m_Localized: Release Q to jump
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521165
+    m_Localized: Path blocked
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521166
+    m_Localized: Release LMB to throw
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521167
+    m_Localized: Hold LMB to throw
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521168
+    m_Localized: Cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521169
+    m_Localized: RMB
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521170
+    m_Localized: MMB
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521171
+    m_Localized: "Landing \xB7 {0:0.0} m"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521172
+    m_Localized: "Blocked \xB7 {0:0.0} m"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521173
+    m_Localized: The guard has raised the alarm. Reinforcements are on their way.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 59219817521174
+    m_Localized: The battery has called up reserves to intercept the convoy.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786232221696
+    m_Localized: "MARK \xB7 {0} turns"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941952
+    m_Localized: "Last known position \xB7 {0} turns"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941953
+    m_Localized: Gas obscures the view
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941954
+    m_Localized: Smoke obscures the view
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941955
+    m_Localized: Line of sight blocked
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941956
+    m_Localized: Aim the reticle at a silhouette
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941957
+    m_Localized: "Target marked \xB7 {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941958
+    m_Localized: You can mark again next turn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941959
+    m_Localized: Target behind cover
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941960
+    m_Localized: Smoke prevents marking
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941961
+    m_Localized: Gas prevents marking
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941962
+    m_Localized: No target to mark
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941963
+    m_Localized: "{0}   \u2212{1} HP   \xB7   {2} HP remaining"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941964
+    m_Localized: "{0}   \xB7   {1:0} m"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941965
+    m_Localized: Mark again next turn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941966
+    m_Localized: "LMB \xB7 mark"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941967
+    m_Localized: "Scroll \xB7 4\xD7"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941968
+    m_Localized: "Scroll \xB7 2\xD7"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941969
+    m_Localized: Patrol sentry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941970
+    m_Localized: Entrance guard
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941971
+    m_Localized: Battery crew
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941972
+    m_Localized: Courtyard guard
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941973
+    m_Localized: Gatekeeper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941974
+    m_Localized: Relief patrol
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941975
+    m_Localized: Lowland patrol
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941976
+    m_Localized: Gallery sentry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941977
+    m_Localized: Bastion patrol
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941978
+    m_Localized: Tab   End turn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941979
+    m_Localized: HEALTH
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941980
+    m_Localized: MOVEMENT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941981
+    m_Localized: MOVE LEFT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941982
+    m_Localized: March
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941983
+    m_Localized: AMMO
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941984
+    m_Localized: "FILTER \xB7 ON"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941985
+    m_Localized: FILTER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941986
+    m_Localized: '{0:0.0} m'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941987
+    m_Localized: '{0} s'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941988
+    m_Localized: T   Remove mask     X   Wipe lens
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941989
+    m_Localized: T   Put on mask
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941990
+    m_Localized: "Reloading\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941991
+    m_Localized: "Hold LMB     {0} \xD7{1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941992
+    m_Localized: LMB   Bayonet thrust
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941993
+    m_Localized: G / F1   Equipment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941994
+    m_Localized: '!  Suppressed'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941995
+    m_Localized: Suppressed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941996
+    m_Localized: Carbine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941997
+    m_Localized: Frag grenade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941998
+    m_Localized: Smoke
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290941999
+    m_Localized: Bayonet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 68786290942000
+    m_Localized: Gas grenade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70153407553536
+    m_Localized: '[Hissing]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70153466273792
+    m_Localized: '[Grenade blast]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70153466273793
+    m_Localized: '[Wet earth crumbles]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70153466273794
+    m_Localized: '[Incoming shell whistles]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70153466273795
+    m_Localized: '[Gate creaks]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70153466273796
+    m_Localized: '[North post reports gas on the embankment]'
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

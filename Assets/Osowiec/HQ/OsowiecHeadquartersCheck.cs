@@ -66,7 +66,7 @@ public sealed class OsowiecHeadquartersCheck : MonoBehaviour
         for(int i=0;i<8;i++)yield return null;
         hadSwitch=PlayerPrefs.HasKey(SavedSwitch); oldSwitch=OsowiecHeadquartersAudio.GramophoneOn; restore=true;
         GameManager.Instance.ResumeGame(); yield return null;
-        Check(FindFirstObjectByType<OsowiecDeskRain>() && GameObject.Find("DugoutStores"),"desk water or fitted-out room absent");
+        Check(FindFirstObjectByType<OsowiecDeskRain>() && GameObject.Find("CommandBunker"),"desk water or fitted-out room absent");
         var uniform=FindFirstObjectByType<OsowiecStaffBody>();
         var skin=uniform.GetComponentsInChildren<SkinnedMeshRenderer>().Single(s=>s.bones.Contains(uniform.leftHand)&&s.bones.Contains(uniform.rightHand));
         Check(skin.enabled && uniform.transform.InverseTransformPoint(uniform.leftArm.position).x<0 && uniform.transform.InverseTransformPoint(uniform.rightArm.position).x>0,"staff shoulders or skinned glove binding");
@@ -95,9 +95,10 @@ public sealed class OsowiecHeadquartersCheck : MonoBehaviour
         }
         Destroy(posed); eye.transform.localRotation=initial;
         Check(cuffError<.036f,$"sleeve cuff detached from wrist by {cuffError:F4} m");
-        WalkTo(new Vector3(3.18f,.08f,1.18f)); yield return null; yield return null;
+        var hornStand=GameObject.Find("FieldGramophone").transform.position;
+        WalkTo(hornStand + new Vector3(0,.08f,-.94f)); yield return null; yield return null;
         var hint=FindObjectsByType<TMP_Text>(FindObjectsSortMode.None).Single(t=>t.name=="Hint");
-        Check(hint.text.Contains("граммофон"),"physical stand failed to offer interaction");
+        Check(hint.text==OsowiecMenuLanguage.Text(OsowiecHeadquartersAudio.GramophoneOn ? "[E]  Выключить граммофон" : "[E]  Включить граммофон"),"physical stand failed to offer interaction: "+hint.text);
         InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
         var key=InputSystem.AddDevice<Keyboard>("HQ test keyboard"); key.MakeCurrent();
         yield return null;
@@ -129,7 +130,7 @@ public sealed class OsowiecHeadquartersCheck : MonoBehaviour
         approach.y=CameraManager.Instance.GetCurrentControlledUnit().transform.position.y;
         WalkTo(approach); yield return null; yield return null;
         var deskHint=FindObjectsByType<TMP_Text>(FindObjectsSortMode.None).Single(t=>t.name=="Hint");
-        Check(!dossier.IsOpen && deskHint.text.Contains("карту операций"),"desk approach did not offer the operation map");
+        Check(!dossier.IsOpen && deskHint.text==OsowiecMenuLanguage.Text("[E]  Открыть карту операций"),"desk approach did not offer the operation map: "+deskHint.text);
         var deskKey=InputSystem.AddDevice<Keyboard>("HQ desk keyboard"); deskKey.MakeCurrent();
         yield return null;
         InputSystem.QueueStateEvent(deskKey,new KeyboardState(Key.E));
@@ -147,15 +148,35 @@ public sealed class OsowiecHeadquartersCheck : MonoBehaviour
         Check(bottom.y>rule.position.y,"order text reaches the rule");
         var desk=text.transform.parent.parent;
         var sheet=desk.Find("Plan of the operation").GetComponent<UnityEngine.UI.RawImage>();
-        Check(sheet.texture && sheet.texture.name=="SurveySheet" && sheet.texture.width>=1600,
-            "briefing did not open the current field survey");
+        using var surveyLease=new OsowiecBunkerLocaleCheck.Artwork("SurveySheet");
+        yield return surveyLease.Loading;
+        var surveyAsset=surveyLease.Loading.Result;
+        // The dossier can open on the same frame as its localized artwork starts loading.
+        float assetDeadline=Time.realtimeSinceStartup+12f;
+        while(sheet.texture!=surveyAsset && Time.realtimeSinceStartup<assetDeadline)yield return null;
+        Check(surveyAsset && sheet.texture==surveyAsset && sheet.texture.width>=1600,
+            "briefing did not open the surveyed sheet for the active locale");
         var corners=new Vector3[4];sheet.rectTransform.GetWorldCorners(corners);
         var orderCorners=new Vector3[4];((RectTransform)text.transform.parent).GetWorldCorners(orderCorners);
         Check(corners[0].x>orderCorners[2].x && corners[0].y>=0 && corners[2].x<=Screen.width && corners[2].y<=Screen.height,
             $"printed field survey {corners[0]:F1} to {corners[2]:F1}, order ends at {orderCorners[2]:F1}, frame {Screen.width} × {Screen.height}");
-        bool onTable=FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include,FindObjectsSortMode.None)
-            .Any(r=>r.sharedMaterials.Any(m=>m && m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap")==sheet.texture));
-        Check(onTable,"no physical table surface shares the briefing sheet");
+        var table=GameObject.Find("CommandTable");
+        Check(table,"no physical command table");
+        var block=new MaterialPropertyBlock();
+        bool SharesSurvey(Renderer renderer)
+        {
+            var materials=renderer.sharedMaterials;
+            for(int i=0;i<materials.Length;i++)
+            {
+                var material=materials[i];
+                if(!material || !material.HasProperty("_BaseMap"))continue;
+                renderer.GetPropertyBlock(block,i);
+                var effective=block.GetTexture("_BaseMap") ?? material.GetTexture("_BaseMap");
+                if(effective==sheet.texture)return true;
+            }
+            return false;
+        }
+        Check(table.GetComponentsInChildren<MeshRenderer>().Any(SharesSurvey),"physical command table differs from briefing artwork");
         if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)
         {
             yield return new WaitForEndOfFrame();

@@ -19,7 +19,7 @@ MonoBehaviour:
   friendlyFire: 0
   isMarksmanRifle: 1
   firstPersonPrefab: {fileID: 4571128351093316885, guid: 11dfcc402ad6ad945b42fdc055236159, type: 3}
-  damagePerHit: 15
+  damagePerHit: 57
   secondsBetweenShots: 0.45
   rpm: 0
   magazineSize: 5

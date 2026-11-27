@@ -141,15 +141,20 @@ def grenade():
     ring.export("KitRing")
 
 
-def smoke():
+def smoke(gas=False):
     p=Prop()
     p.profile([(-.066,.027),(-.064,.033),(-.059,.036),(-.051,.036),(-.048,.034),(.056,.034),
                (.059,.037),(.066,.037),(.069,.031)],"olive")
     for y in [-.059,-.053,.056,.064]:
         p.stripe(y,y+.003,.0374,"steel")
-    p.stripe(.019,.038,.0348,"bone")
-    p.stripe(.014,.017,.035,"red")
-    for i in range(6):
+    if gas:
+        for quarter in range(4):
+            a=quarter*pi/2
+            p.profile([(-.018,.0353),(.041,.0353)],"bone",12,angles=(a,a+pi/2),cap=False)
+    else:
+        p.stripe(.019,.038,.0348,"bone")
+    p.stripe(-.023 if gas else .014,-.020 if gas else .017,.035,"red")
+    for i in range(0 if gas else 6):
         start=i*pi/3+.12
         p.profile([(.022,.0350),(.035,.0350)],"red",4,angles=(start,start+.27),cap=False)
     p.profile([(.068,.028),(.071,.027),(.072,.021),(.076,.018),(.085,.017),(.088,.013)],"blued",24)
@@ -159,7 +164,25 @@ def smoke():
     for i in range(12):
         a=i*pi/6
         p.profile([(.069,.0025),(.071,.0025)],"black",10,center=(.023*cos(a),.023*sin(a)))
-    p.export("Smoke")
+    p.export("Gas" if gas else "Smoke")
+
+
+def gas_print():
+    image=Image.open(MODELS/"FieldFinish.png").convert("RGB")
+    tile=Image.new("RGB",(512,512),(203,177,91))
+    d=ImageDraw.Draw(tile)
+    ink=(49,45,35)
+    d.rectangle((9,9,502,502),outline=ink,width=8)
+    d.ellipse((94,46,417,343),fill=ink)
+    d.polygon([(134,270),(377,270),(357,345),(324,351),(316,424),(196,424),(188,351),(157,344)],fill=ink)
+    yellow=(203,177,91)
+    for x in (148,282): d.ellipse((x,207,x+81,285),fill=yellow)
+    d.polygon([(256,268),(229,324),(281,324)],fill=yellow)
+    for x in (219,252,285): d.rectangle((x,372,x+9,427),fill=yellow)
+    w=image.width//4
+    index=list(PALETTE).index("bone")
+    image.paste(tile.resize((w,w),Image.Resampling.LANCZOS),((index%4)*w,(1-index//4)*w))
+    image.save(MODELS/"FieldGasFinish.png",optimize=True)
 
 
 def bayonet():
@@ -217,6 +240,15 @@ def icons():
         for x,y in [(48,58),(58,61),(68,64)]:l([(x-1,y+4),(x+3,y-2)],shadow,2)
         l([(32,91),(60,98),(70,97)],shadow,2.8);l([(46,43),(72,50),(83,48)],shadow,2.6)
         for pts_ in [[(78,34),(85,29),(83,22),(88,16)],[(85,40),(95,35),(98,27)]]:l(pts_,sand,2.5)
+    def gas(l,p,e):
+        p([(38,35),(48,29),(49,19),(77,19),(78,29),(91,36),(91,94),(85,102),(40,102),(34,94),(34,40)],sand)
+        p([(37,44),(88,44),(88,87),(37,87)],shadow)
+        e((44,46,82,74),paper)
+        p([(49,65),(77,65),(73,80),(54,80)],paper)
+        for x in (50,66): e((x,57,x+9,65),shadow)
+        p([(63,63),(60,69),(66,69)],shadow)
+        for x in (58,64,69): l([(x,75),(x,81)],shadow,1.8)
+        l([(39,89),(86,89)],light,2)
     def bayonet(l,p,e):
         p([(21,97),(17,93),(35,75),(33,69),(37,65),(43,70),(71,45),(109,20),(87,49),
            (52,78),(56,84),(53,89),(46,84),(28,101)])
@@ -242,7 +274,7 @@ def icons():
         p([(69,37),(74,31),(78,41)],sand);e((84,44,88,48),shadow)
         l([(58,52),(66,58),(74,57)],shadow,2.4)
         l([(20,62),(41,56)],sand,3);l([(18,72),(39,66)],sand,2.8);l([(26,52),(45,48)],sand,2)
-    for name,recipe in [("Rifle",rifle),("Grenade",grenade),("Smoke",smoke),("Bayonet",bayonet),
+    for name,recipe in [("Rifle",rifle),("Grenade",grenade),("Smoke",smoke),("Gas",gas),("Bayonet",bayonet),
                         ("Leap",leap),("Periscope",periscope),("Rush",rush)]:
         draw(name,recipe)
 
@@ -251,6 +283,8 @@ if __name__=="__main__":
     atlas()
     grenade()
     smoke()
+    smoke(True)
+    gas_print()
     bayonet()
     icons()
 

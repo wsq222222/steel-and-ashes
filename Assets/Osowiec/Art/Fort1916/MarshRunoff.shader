@@ -3,7 +3,8 @@ Shader "Steel and Ashes/Marsh Runoff"
     Properties { _Shallow ("Shallow mud", Color) = (.16,.143,.101,1) _Sky ("Reflected sky", Color) = (.43,.47,.44,1) }
     SubShader
     {
-        Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent-20"}
+        // Composite low-lying pools before the overlying suspended mist (Transparent-30).
+        Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent-45"}
         Pass
         {
             Tags {"LightMode"="UniversalForward"}

@@ -9,7 +9,7 @@ internal sealed class OsowiecKitWheel
     static readonly Color Brass = new(.83f,.69f,.41f);
     static readonly Color Shell = new(.12f,.15f,.13f,.94f);
     static readonly Color Selected = new(.44f,.28f,.16f,.97f);
-    readonly Texture2D[] icons = new Texture2D[7];
+    readonly Texture2D[] icons = new Texture2D[8];
     readonly Texture2D[] slices = new Texture2D[7];
     GUIStyle label;
     Vector2 pointer;
@@ -25,7 +25,7 @@ internal sealed class OsowiecKitWheel
         2 => UnityEngine.InputSystem.Keyboard.current?.cKey.wasPressedThisFrame == true,
         _ => UnityEngine.InputSystem.Mouse.current?.rightButton.wasPressedThisFrame == true
     };
-    public static string Name(OsowiecKitItem item) => Names[(int)item];
+    public static string Name(OsowiecKitItem item) => OsowiecMenuLanguage.Text(Names[(int)item]);
     static int Count(Unit unit) => unit.chessType == ChessUnitType.Pawn ? 4 : 3;
     static OsowiecKitItem Slot(Unit unit, int index) =>
         index == 2 && unit.chessType == ChessUnitType.Pawn ? OsowiecKitItem.Gas : (OsowiecKitItem)index;
@@ -101,7 +101,7 @@ internal sealed class OsowiecKitWheel
         if (!icons[index])
         {
             string key = index < 4 ? ((OsowiecKitItem)index).ToString() :
-                index == 4 ? "Leap" : index == 5 ? "Periscope" : "Rush";
+                index == 4 ? "Leap" : index == 5 ? "Periscope" : index==6 ? "Rush" : "Gas";
             icons[index] = Resources.Load<Texture2D>("OsowiecKit/"+key);
         }
         return icons[index];
@@ -130,13 +130,30 @@ internal sealed class OsowiecKitWheel
         float s=OsowiecHudPaint.Scale;
         int icon=unit.chessType==ChessUnitType.Pawn?4:unit.chessType==ChessUnitType.Bishop?5:6;
         string title=icon==4?"Пневмотолчок":icon==5?"Перископ":"Рывок";
-        Vector2 anchor=new(Screen.width-186*s,Screen.height-97*s);
-        var rect=new Rect(anchor.x,anchor.y,164*s,58*s);
+        var rect=new Rect(Screen.width-302*s,Screen.height-119*s,279*s,85*s);
         OsowiecHudPaint.Panel(rect);
-        var ink=cooling && !scope ? new Color(.66f,.65f,.54f) : Paper;
-        Picture(new Rect(rect.x+8*s,rect.y+7*s,40*s,44*s),Icon(icon),ink);
-        Center(new Rect(rect.x+52*s,rect.y+5*s,106*s,26*s),title,18*s,ink);
-        Center(new Rect(rect.x+50*s,rect.y+30*s,110*s,20*s),scope?"Q · Сложить":cooling?"След. ход":icon==4?"Держать Q":"Q · Применить",14*s,Brass);
+        var ink=cooling && !scope && icon!=5 ? new Color(.66f,.65f,.54f) : Paper;
+        Picture(new Rect(rect.x+8*s,rect.y+10*s,63*s,63*s),Icon(icon),ink);
+        string hint=scope?"Q · Сложить":icon==5?"Q · Наблюдать":cooling?"Следующий ход":icon==4?"Удерживайте Q":"Q · Применить";
+        OsowiecHudPaint.Text(new Rect(rect.x+77*s,rect.y+7*s,198*s,39*s),OsowiecMenuLanguage.Text(title),26,ink);
+        OsowiecHudPaint.Text(new Rect(rect.x+77*s,rect.y+43*s,198*s,32*s),OsowiecMenuLanguage.Text(hint),20,Brass);
+    }
+
+    public void DrawCharge(bool jump,bool throwing,bool clear,float amount)
+    {
+        float s=OsowiecHudPaint.Scale;
+        float w=Mathf.Min(388*s,Screen.width*.63f);
+        var panel=new Rect((Screen.width-w)*.5f,Screen.height*.72f,w,80*s);
+        OsowiecHudPaint.Panel(panel);
+        string action=jump?(clear?"Отпустите Q для прыжка":"Путь перекрыт"):throwing?"Отпустите ЛКМ для броска":"Удерживайте ЛКМ для броска";
+        Color accent=jump&&!clear ? new Color(1,.60f,.40f) : Brass;
+        OsowiecHudPaint.Text(new Rect(panel.x+14*s,panel.y+4*s,w-78*s,30*s),OsowiecMenuLanguage.Text(action),22,Paper);
+        float charge=jump||throwing?amount:0;
+        Center(new Rect(panel.xMax-72*s,panel.y+4*s,61*s,30*s),Mathf.RoundToInt(charge*100)+"%",22*s,accent);
+        OsowiecHudPaint.Meter(new Rect(panel.x+14*s,panel.y+39*s,w-28*s,8*s),charge,accent);
+        if(jump||throwing)
+            OsowiecHudPaint.Text(new Rect(panel.x+14*s,panel.y+50*s,w-28*s,25*s),
+                OsowiecMenuLanguage.Text(CancelName)+" · "+OsowiecMenuLanguage.Text("Отмена"),18,Paper);
     }
 
     Texture2D glass,hub;
@@ -158,7 +175,18 @@ internal sealed class OsowiecKitWheel
         hub.Apply(false,true);
         return hub;
     }
-    public void DrawScope(Unit target, bool transferred, float range, bool zoomed)
+    public void DrawRifleSight(bool target) => DrawGlass(false,target);
+    public void DrawScope(Unit target,bool transferred,float range,bool zoomed,string hint)
+    {
+        var lens=DrawGlass(true,target);
+        float s=OsowiecHudPaint.Scale;
+        float middle=lens.center.x;
+        string value=target ? OsowiecMenuLanguage.Format("{0}   ·   {1:0} м",OsowiecMenuLanguage.Text(target.GetUnitDisplayName()),range) : hint;
+        OsowiecHudPaint.FittedPlate(new Vector2(middle,lens.yMax-84*s),value,460*s);
+        Center(new Rect(middle-300*s,lens.yMax-43*s,600*s,30*s), OsowiecMenuLanguage.Text(transferred ? "Новая метка · следующий ход" : "ЛКМ · отметить") + "     " + OsowiecMenuLanguage.Text(zoomed ? "Колесо · 4×" : "Колесо · 2×") + "     " + OsowiecMenuLanguage.Text("Q · Сложить"),17*s,Paper);
+    }
+
+    Rect DrawGlass(bool periscope,bool target)
     {
         if(!glass)
         {
@@ -178,30 +206,36 @@ internal sealed class OsowiecKitWheel
             glass.SetPixels32(pixels); glass.Apply(false,true);
         }
         float s=OsowiecHudPaint.Scale;
-        float diameter=Screen.height*.82f;
+        float diameter=Mathf.Min(Screen.width,Screen.height)*(periscope?.82f:.79f);
         Vector2 middle=new(Screen.width*.5f,Screen.height*.5f);
         var lens=new Rect(middle.x-diameter*.5f,middle.y-diameter*.5f,diameter,diameter);
-        Color shell=new(.047f,.053f,.04f,.97f);
+        Color shell=new(.047f,.053f,.04f,periscope?.97f:.65f);
         OsowiecHudPaint.Fill(new Rect(0,0,Screen.width,lens.y),shell);
         OsowiecHudPaint.Fill(new Rect(0,lens.yMax,Screen.width,Screen.height-lens.yMax),shell);
         OsowiecHudPaint.Fill(new Rect(0,lens.y,lens.x,diameter),shell);
         OsowiecHudPaint.Fill(new Rect(lens.xMax,lens.y,Screen.width-lens.xMax,diameter),shell);
+        var color=GUI.color;
+        GUI.color=new Color(color.r,color.g,color.b,color.a*(periscope?1f:.67f));
         GUI.DrawTexture(lens,glass);
-        Color ink=target?new Color(.92f,.68f,.36f):new Color(.17f,.18f,.13f);
+        GUI.color=color;
+        Color shadow=new(.10f,.10f,.075f,.94f);
+        Color engraving=target?new Color(.98f,.75f,.38f):new Color(.84f,.78f,.61f,.94f);
+        s=Mathf.Min(s,diameter/550f);
+        void Etch(float x,float y,float w,float h)
+        {
+            var mark=new Rect(middle.x+x*s,middle.y+y*s,Mathf.Max(1,w*s),Mathf.Max(1,h*s));
+            OsowiecHudPaint.Fill(new Rect(mark.x-1,mark.y-1,mark.width+2,mark.height+2),shadow);
+            OsowiecHudPaint.Fill(mark,engraving);
+        }
+        // Fine open intersection keeps the centre visible against both bright sky and the dark trench.
         for(int side=-1;side<=1;side+=2)
         {
-            for(int j=1;j<=7;j++)
-            {
-                float x=middle.x+side*(24+j*13)*s;
-                OsowiecHudPaint.Fill(new Rect(x,middle.y,1.6f*s,(j%2==1?7:12)*s),ink);
-            }
-            OsowiecHudPaint.Fill(new Rect(middle.x+(side<0?-119:24)*s,middle.y,95*s,1.5f*s),ink);
+            Etch(side<0?-94:5,-.65f,89,1.3f);
+            Etch(-.65f,side<0?-29:5,1.3f,24);
+            for(int i=1;i<=4;i++)
+                Etch(side*(15+i*15)-.5f,0,1,(i%2==0 ? 7 : 4));
         }
-        OsowiecHudPaint.Fill(new Rect(middle.x-1*s,middle.y-13*s,2*s,26*s),ink);
-        OsowiecHudPaint.Fill(new Rect(middle.x-13*s,middle.y-1*s,26*s,2*s),ink);
-        string value=target ? target.GetUnitDisplayName()+"   ·   "+range.ToString("0")+" м" : "Наведите перекрестие на силуэт";
-        OsowiecHudPaint.Plate(new Rect(middle.x-175*s,lens.yMax-78*s,350*s,32*s),value,true);
-        Center(new Rect(middle.x-300*s,lens.yMax-43*s,600*s,30*s), (transferred ? "Метка · урон отряда +20%" : "ЛКМ · отметить") + (zoomed ? "     Колесо · 4×" : "     Колесо · 2×") + "     Q · сложить",17*s,Paper);
+        return lens;
     }
 
     public void Draw(Unit unit,bool onF1)
@@ -223,7 +257,7 @@ internal sealed class OsowiecKitWheel
             var item=Slot(unit,i);
             bool active=Hover==item;
             int quantity=OsowiecFieldKit.Remaining(unit,item);
-            Picture(new Rect(point.x-37,point.y-37,74,59),Icon(i),item==OsowiecKitItem.Gas && quantity>0 ? new Color(.74f,.84f,.35f) : quantity==0?new Color(.55f,.53f,.45f):active?Color.white:Paper);
+            Picture(new Rect(point.x-37,point.y-37,74,59),Icon(item==OsowiecKitItem.Gas?7:i),quantity==0?new Color(.55f,.53f,.45f):active?Color.white:Paper);
             string label=item==OsowiecKitItem.Grenade && unit.chessType==ChessUnitType.Pawn ? "Усиленная" : Name(item);
             string name=label+(quantity>=0 ? " ×"+quantity : "");
             Center(new Rect(point.x-62,point.y+20,124,29),name,20,quantity==0?Brass:active?Color.white:Paper);

@@ -25,7 +25,29 @@ public sealed class OsowiecWeaponView : MonoBehaviour
     OsowiecKitItem stowedItem;
     readonly Transform[] rings=new Transform[5];
     readonly Vector3[] ringRest=new Vector3[5];
-    Renderer supportGlove;
+    Transform brace, leftGrip, rightGrip, leftCuff, rightCuff;
+    float releaseTime;
+    public static void ReleaseThrowable(Unit actor,OsowiecKitItem item)
+    {
+        if(!current || current.previousUnit!=actor)return;
+        current.stowedItem=item;
+        current.releaseTime=.32f;
+        current.reseatTime=0;
+    }
+    internal static bool OnePairOfHands(Unit unit)
+    {
+        if(!current || current.previousUnit!=unit || !current.pivot)return false;
+        var visible=current.pivot.GetComponentsInChildren<Renderer>()
+            .Where(r=>r.enabled && !r.forceRenderingOff && r.name.StartsWith("FieldGlove")).ToArray();
+        return visible.Length==2 && visible.Any(r=>r.name=="FieldGloveL") && visible.Any(r=>r.name=="FieldGloveR");
+    }
+    internal static bool FingersOnThrowable(Unit unit)
+    {
+        if(!OnePairOfHands(unit) || !current.leftGrip || !current.rightGrip)return false;
+        var ring=current.rings[(int)current.shown];
+        return ring && Vector3.Distance(current.leftGrip.position,ring.position)<.04f &&
+            Vector3.Distance(current.rightGrip.position,current.kitGrip.position)<.05f;
+    }
     public static void StowEquipment(Unit actor,OsowiecKitItem item,float strength)
     {
         if(!current || current.previousUnit!=actor) return;
@@ -86,13 +108,16 @@ public sealed class OsowiecWeaponView : MonoBehaviour
         pivot.gameObject.SetActive(true);
         var held=OsowiecFieldKit.Held(actor);
         if(actor!=previousUnit || held!=OsowiecKitItem.Rifle || Mouse.current?.leftButton.wasPressedThisFrame==true)
-            reseatTime=0;
+            reseatTime=releaseTime=0;
+        bool releasing=releaseTime>0;
+        if(releasing)held=stowedItem;
         if(reseatTime>0)
         {
             held=stowedItem;
             reseatTime=Mathf.Max(0,reseatTime-Time.deltaTime);
         }
         ApplyItem(held);
+        if(OsowiecFieldKit.Throwable(held) && kitModels[(int)held])kitModels[(int)held].SetActive(!releasing);
         if(GameManager.Instance!=null && GameManager.Instance.IsPaused())return;
         float dt = Time.deltaTime;
         if(dt<=0)return;
@@ -126,13 +151,14 @@ public sealed class OsowiecWeaponView : MonoBehaviour
         breathTime=(breathTime+dt) % (2*Mathf.PI/.95f);
         hurtTime=Mathf.Max(0,hurtTime-dt); equipTime=Mathf.Max(0,equipTime-dt);
         var mouse = Mouse.current;
-        bool aim = held==OsowiecKitItem.Rifle && !OsowiecFieldKit.WheelOpen && mouse != null && mouse.rightButton.isPressed && !weapon.IsReloading && !mask;
+        bool aim = held==OsowiecKitItem.Rifle && OsowiecFieldKit.RifleSight(actor);
         aimBlend=Mathf.MoveTowards(aimBlend,aim?1:0,dt*6.5f);
         var delta = mouse != null && !OsowiecFieldKit.WheelOpen ? mouse.delta.ReadValue() : Vector2.zero;
         sway = Vector2.Lerp(sway,Vector2.ClampMagnitude(delta,20)*.0012f,1-Mathf.Exp(-dt*12));
         var lens=cameras.GetActionCamera();
         float fov=OsowiecFieldSettings.FieldOfView;
-        if (!Mathf.Approximately(lens.fieldOfView,fov)) lens.fieldOfView=fov;
+        float desiredFov=Mathf.Lerp(fov,OsowiecFieldKit.MagnifiedFov(fov,1.35f),aimBlend);
+        if (!Mathf.Approximately(lens.fieldOfView,desiredFov)) lens.fieldOfView=desiredFov;
         float frame = Mathf.Clamp(Mathf.Tan(fov*Mathf.Deg2Rad*.5f)/.65f,.7f,1.35f);
         Vector3 grip=Vector3.Lerp(new Vector3(.205f,-.184f,.485f),new Vector3(.035f,-.16f,.46f),aimBlend);
         float motionScale=(OsowiecFieldSettings.ReducedShake ? .3f : 1f)*(1f-.83f*aimBlend)*(weapon.IsReloading ? .32f : 1f);
@@ -157,25 +183,25 @@ public sealed class OsowiecWeaponView : MonoBehaviour
         {
             pivot.localPosition+=new Vector3(.001f,.078f,-.025f);
             float windup = reseatTime>0 ? reseatStart*Mathf.SmoothStep(0,1,reseatTime/.32f) : OsowiecFieldKit.ThrowCharge(actor);
+            float follow=releasing ? Mathf.SmoothStep(0,1,1-releaseTime/.32f) : 0;
+            if(releasing)windup=(1-follow)*.82f;
             var ring=rings[(int)held];
             if(ring)
             {
                 float lift=Mathf.SmoothStep(0,1,Mathf.Min(1,windup*3));
                 ring.localPosition=ringRest[(int)held]+new Vector3(-.088f,.023f,-.016f)*lift;
                 ring.localRotation=Quaternion.Euler(0,0,24*lift);
-                if(support && supportGlove)
-                {
-                    bool gripping=lift>.001f || reseatTime>0;
-                    support.gameObject.SetActive(gripping);
-                    if(gripping)
-                    {
-                        support.localPosition=Vector3.zero;
-                        support.position+=ring.position-supportGlove.bounds.center+kitGrip.TransformVector(new Vector3(-.028f,-.022f,0));
-                    }
-                }
+                var armSpace=kitGrip.parent;
+                var rest=armSpace.TransformPoint(new Vector3(-.34f,-.23f,-.14f));
+                var ringTarget=ring.position+armSpace.TransformVector(new Vector3(-.009f,0,-.004f));
+                var left=Vector3.Lerp(rest,ringTarget,lift*(1-follow));
+                var right=kitGrip.position+armSpace.TransformVector(new Vector3(.012f,-.019f,-.018f+follow*.16f));
+                PoseArm(support,leftGrip,leftCuff,left,new Vector3(-.44f,-.26f,-.42f));
+                PoseArm(brace,rightGrip,rightCuff,right,new Vector3(.24f,-.25f,-.43f));
             }
             pivot.localPosition += new Vector3(.05f,.065f,-.11f) * windup;
             pivot.localRotation*=Quaternion.Euler(-9-27*windup,-25+14*windup,-19-8*windup);
+            releaseTime=Mathf.Max(0,releaseTime-dt);
         }
         if(held==OsowiecKitItem.Bayonet)
         {
@@ -185,12 +211,22 @@ public sealed class OsowiecWeaponView : MonoBehaviour
             pivot.localRotation*=Quaternion.Euler(-17,-28,-14);
         }
         pivot.localPosition+=Vector3.down*(changeLift*changeLift*.105f);
-        if (graph.IsValid() && (weapon.IsReloading || posed))
+        if (!OsowiecFieldKit.Throwable(held) && graph.IsValid() && (weapon.IsReloading || posed))
         {
             reload.SetTime(weapon.IsReloading ? weapon.ReloadPhase * reloadClip.length : 0);
             graph.Evaluate(0);
         }
         posed = weapon.IsReloading;
+    }
+
+    // The authored grip lies between the fingers. Bounds.center lies halfway up the sleeve.
+    static void PoseArm(Transform mount,Transform grip,Transform cuff,Vector3 target,Vector3 shoulder)
+    {
+        if(!mount || !grip || !cuff)return;
+        mount.SetLocalPositionAndRotation(Vector3.zero,Quaternion.identity);
+        var towards=mount.parent.TransformPoint(shoulder)-target;
+        mount.rotation=Quaternion.FromToRotation(cuff.position-grip.position,towards)*mount.rotation;
+        mount.position+=target-grip.position;
     }
 
     void CreateView(Transform camera, GameObject modelPrefab, Unit actor)
@@ -220,7 +256,11 @@ public sealed class OsowiecWeaponView : MonoBehaviour
         Mount("Brace","FieldGloveR");
         Mount("Cassette","FieldFeed");
         support=carriage.Find("Support");
-        supportGlove=support ? support.GetComponentInChildren<Renderer>() : null;
+        brace=carriage.Find("Brace");
+        leftGrip=nodes.FirstOrDefault(n=>n.name=="FieldGripL");
+        rightGrip=nodes.FirstOrDefault(n=>n.name=="FieldGripR");
+        leftCuff=nodes.FirstOrDefault(n=>n.name=="FieldCuffL");
+        rightCuff=nodes.FirstOrDefault(n=>n.name=="FieldCuffR");
         cassette=carriage.Find("Cassette");
         kitGrip=new GameObject("Equipment grip").transform;
         kitGrip.SetParent(carriage,false);
@@ -262,7 +302,8 @@ public sealed class OsowiecWeaponView : MonoBehaviour
         bool rifle=!OsowiecFieldKit.Throwable(item);
         rifleBody.SetActive(rifle);
         if(cassette) cassette.gameObject.SetActive(rifle);
-        if(support) { support.localPosition=Vector3.zero; support.gameObject.SetActive(rifle); }
+        if(support) support.SetLocalPositionAndRotation(Vector3.zero,Quaternion.identity);
+        if(brace) brace.SetLocalPositionAndRotation(Vector3.zero,Quaternion.identity);
         if(kitModels[(int)item]) kitModels[(int)item].SetActive(true);
         shown=item;
         changeLift=1;
@@ -278,7 +319,7 @@ public sealed class OsowiecWeaponView : MonoBehaviour
         }
         pivot = tip = support = cassette = kitGrip = null;
         System.Array.Clear(kitModels,0,kitModels.Length);
-        reseatTime=0; supportGlove=null;
+        reseatTime=releaseTime=0; brace=leftGrip=rightGrip=leftCuff=rightCuff=null;
         System.Array.Clear(rings,0,rings.Length);
         posed = false;
     }

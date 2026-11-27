@@ -26,6 +26,11 @@ public sealed class OsowiecGroundEvents : MonoBehaviour
     float activeSeconds, quietUntil, flashLeft;
     bool distantFired;
     Light impactFlash;
+    LineRenderer distantStreak;
+    float untilDistantFlight=2.7f, flightTime;
+    int flightNumber;
+    Vector3 flightStart, flightEnd;
+    static readonly Vector3[] FarBanks={new(-20,0,23),new(24,0,23),new(18,0,-26),new(-36,0,27)};
 
     NavMeshSurface surface;
     NavMeshData initialNavigation;
@@ -94,6 +99,17 @@ public sealed class OsowiecGroundEvents : MonoBehaviour
         impactFlash.range=13f;
         impactFlash.shadows=LightShadows.None;
         impactFlash.enabled=false;
+        distantStreak=new GameObject("Distant passing shell · horizon trail").AddComponent<LineRenderer>();
+        distantStreak.transform.SetParent(transform,false);
+        distantStreak.useWorldSpace=true;
+        distantStreak.positionCount=5;
+        distantStreak.widthCurve=new AnimationCurve(new Keyframe(0,0),new Keyframe(.74f,1),new Keyframe(1,.38f));
+        distantStreak.widthMultiplier=.072f;
+        distantStreak.numCapVertices=2;
+        distantStreak.shadowCastingMode=ShadowCastingMode.Off;
+        distantStreak.receiveShadows=false;
+        distantStreak.sharedMaterial=warningMaterial;
+        distantStreak.enabled=false;
         surface = FindFirstObjectByType<NavMeshSurface>();
         if (surface == null || !surface.enabled)
         {
@@ -139,6 +155,7 @@ public sealed class OsowiecGroundEvents : MonoBehaviour
         }
         var game = GameManager.Instance;
         if (game == null || game.IsPaused() || game.IsArmyDeploymentPhase() || game.IsGameOver()) return;
+        AnimateDistantFlight(Time.deltaTime);
         var cam = CameraManager.Instance;
         var unit = cam != null && cam.IsActionMode() ? cam.GetCurrentControlledUnit() : null;
         if(flashLeft>0f)
@@ -185,6 +202,40 @@ public sealed class OsowiecGroundEvents : MonoBehaviour
             quietUntil=activeSeconds+16;
             break;
         }
+    }
+
+    void AnimateDistantFlight(float dt)
+    {
+        if(!distantStreak.enabled)
+        {
+            untilDistantFlight-=dt;
+            if(untilDistantFlight>0)return;
+            flightEnd=FarBanks[flightNumber%FarBanks.Length];
+            if(Physics.Raycast(flightEnd+Vector3.up*28,Vector3.down,out var ground,45,
+                                Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                flightEnd.y=ground.point.y;
+            flightStart=flightEnd+new Vector3(flightNumber%2==0?-22:24,13,9);
+            flightTime=0;
+            distantStreak.enabled=true;
+            flightNumber++;
+        }
+        flightTime=Mathf.Min(1,flightTime+dt/.90f);
+        for(int i=0;i<5;i++)
+        {
+            float age=Mathf.Max(0,flightTime-(4-i)*.035f);
+            Vector3 p=Vector3.Lerp(flightStart,flightEnd,age);
+            p.y+=2.4f*Mathf.Sin(age*Mathf.PI);
+            distantStreak.SetPosition(i,p);
+        }
+        if(flightTime<1)return;
+        distantStreak.enabled=false;
+        if(plumeMaterial)
+        {
+            var gameRandom=Random.state;
+            try { Random.InitState(1753+flightNumber);ThrowDust(flightEnd,true); }
+            finally { Random.state=gameRandom; }
+        }
+        untilDistantFlight=OsowiecFieldSettings.ReducedEffects ? 18f : (flightNumber%3==1 ? 5.8f : 9.7f);
     }
 
     public static bool IsWarned(Vector3 point)

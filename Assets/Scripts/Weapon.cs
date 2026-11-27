@@ -130,7 +130,7 @@ public class Weapon : MonoBehaviour
     public bool TryFire(Unit owner, Vector3 origin, Vector3 direction)
     {
         if (!OsowiecFireTurn.Allows(owner)) return false;
-        if (gameObject.scene.name == "Osowiec" && owner.owner == Player.Player1 && owner.FieldTurn.Attacked)
+        if (gameObject.scene.name == "Osowiec" && owner.FieldTurn.Attacked)
             return false;
         return ResolveShot(owner, origin, direction);
     }
@@ -165,7 +165,7 @@ public class Weapon : MonoBehaviour
         bool friendly = config.friendlyFire;
         bool fieldMission = gameObject.scene.name == "Osowiec";
         bool alliedFieldShot = fieldMission && owner.owner == Player.Player1;
-        bool observed = alliedFieldShot && owner.FieldTurn.Fire();
+        bool observed = fieldMission && owner.FieldTurn.Fire();
         int baseDamage = Mathf.Max(0, config.damagePerHit);
 
         Transform muzzleXf = OsowiecWeaponView.VisibleMuzzle(owner);
@@ -197,37 +197,23 @@ public class Weapon : MonoBehaviour
             hitPoint = hit.point;
             hitNormal = hit.normal;
             if (alliedFieldShot) OsowiecOperation.Instance?.HearImpact(hitPoint, owner.transform.position);
-            if (fieldMission)
-            {
-                int spread = owner.chessType == ChessUnitType.Pawn ? 2 : 1;
-                baseDamage = Mathf.Max(0, baseDamage + Random.Range(-spread, spread + 1));
-            }
-            baseDamage = OsowiecFieldTurn.ShotDamage(baseDamage, observed, hit.distance);
-
             Unit target = hit.collider != null ? hit.collider.GetComponentInParent<Unit>() : null;
             if (target != null && target != owner)
             {
                 bool isEnemy = target.owner != owner.owner;
                 if (!scattered && (isEnemy || friendly))
                 {
-                    int finalDamage = Mathf.RoundToInt(baseDamage * owner.GetDamageMultiplier());
                     targetHit = target;
-                    if (alliedFieldShot && isEnemy && OsowiecFieldKit.IsIdentified(target))
-                        finalDamage = Mathf.RoundToInt(finalDamage * 1.2f);
-                    if (part && part.area == OsowiecHitArea.Helmet)
+                    int before = Mathf.Max(0, target.GetHealth());
+                    var zone = part ? part.area : OsowiecHitArea.Torso;
+                    int finalDamage = fieldMission
+                        ? OsowiecFieldTurn.ShotDamage(baseDamage, zone, observed, hit.distance,
+                            isEnemy && OsowiecFieldKit.IsIdentified(target), owner.GetDamageMultiplier())
+                        : Mathf.RoundToInt(baseDamage * owner.GetDamageMultiplier());
+                    if (part && zone == OsowiecHitArea.Helmet)
                         part.DropHelmet(target, direction);
-                    else
-                    {
-                        int before = Mathf.Max(0, target.GetHealth());
-                        bool exposedHead = part && part.area == OsowiecHitArea.Head &&
-                            target.TryGetComponent<OsowiecHitBody>(out var body) && body.HelmetLost;
-                        bool preciseRifleHit = config.isMarksmanRifle && part &&
-                            (part.area == OsowiecHitArea.Head || part.area == OsowiecHitArea.Torso);
-                        bool decisiveHit = fieldMission && isEnemy && (exposedHead || preciseRifleHit);
-                        if (part && part.area == OsowiecHitArea.Head) finalDamage *= 2;
-                        target.TakeDamage(finalDamage, owner, decisiveHit);
-                        damageDealt = Mathf.Max(0, before - Mathf.Max(0, target.GetHealth()));
-                    }
+                    target.TakeDamage(finalDamage, owner);
+                    damageDealt = Mathf.Max(0, before - Mathf.Max(0, target.GetHealth()));
                 }
             }
             else
@@ -245,6 +231,7 @@ public class Weapon : MonoBehaviour
 
         // Визуал: луч от дула; урон — по origin/direction (у игрока это камера).
         Vector3 tracerStart = muzzleXf != null ? muzzleXf.position : origin;
+        if (alliedFieldShot) OsowiecFieldKit.ReportPlayerShot(owner,targetHit,Mathf.RoundToInt(damageDealt));
         if (fieldMission && owner.owner == Player.Player2)
             OsowiecEnemyFireReadout.Report(owner, targetHit, tracerStart, hitPoint, damageDealt);
         if (OsowiecOperation.Instance != null) OsowiecStressEffects.PassBy(owner, tracerStart, hitPoint);

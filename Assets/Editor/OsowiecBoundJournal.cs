@@ -11,13 +11,15 @@ public static partial class OsowiecHeadquartersBuilder
     static readonly Color RedInk=new(.39f,.13f,.09f);
     static readonly Color Parchment=new(.83f,.76f,.61f);
     static readonly Color GhostInk=new(.34f,.30f,.22f);
-    const string Approaches="От лазарета к телефону ведёт траншея. Сбор у низины ближе к телефону. В низине нужна маска. Заряд у двери каземата [E] поднимет тревогу.";
+    const string Approaches="От лазарета к телефону ведёт западный ход. Из центральной траншеи идите по настилу до развилки. За телефоном в низине нужна маска. Заряд у двери каземата [E] поднимет тревогу.";
 
     static RawImage Print(Transform parent,string asset,Vector2 anchor,Vector2 size)
     {
         var area=Rect(parent,asset,anchor,size);
         var print=area.gameObject.AddComponent<RawImage>();
-        print.texture=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/OsowiecJournal/"+asset+".png");
+        // The photographed title screen is supplied by the localized asset table.
+        if(asset=="hq")print.enabled=false;
+        else print.texture=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/OsowiecJournal/"+asset+".png");
         print.raycastTarget=false;
         return print;
     }
@@ -67,9 +69,9 @@ public static partial class OsowiecHeadquartersBuilder
         objective.lineSpacing=2;
         Line(paper,"Orders divider",new(.5f,.389f),new(478,1),GhostInk);
         Type(paper,"Conditions",Approaches,.5f,.274f,474,146,22,GhostInk);
-        var start=Link(paper,"Deploy","К расстановке    →",.50f,.102f,474,null,true);
+        var start=Link(paper,"Deploy","К расстановке",.50f,.102f,474,null,true);
         UnityEventTools.AddPersistentListener(start.onClick,terminal.PrepareMission);
-        var back=Link(desk,"Close dossier","‹   К штабному столу",.218f,.131f,366,null);
+        var back=Link(desk,"Close dossier","К штабному столу",.218f,.131f,366,null);
         definition.previewSprite=map;
         EditorUtility.SetDirty(definition);
         picker.Initialize(overlay.gameObject,back,null,null,start,title,objective,null,new[]{definition});
@@ -135,7 +137,7 @@ public static partial class OsowiecHeadquartersBuilder
             Type(home,"HQ edition","IRON PROTOCOL",.267f,.818f,710,43,25,Brass);
             Type(home,"Masthead","Steel & Ashes",.285f,.697f,794,146,98,Ivory);
             Type(home,"Place","Осовец  ·  Полевой штаб",.267f,.587f,710,55,35,Ivory);
-            foreach(var b in new[]{Link(home,"Continue","К штабному столу   →",.228f,.418f,525,manager.ResumeGame,true),
+            foreach(var b in new[]{Link(home,"Continue","К штабному столу",.228f,.418f,525,manager.ResumeGame,true),
                 Link(home,"Settings","Настройки",.228f,.332f,525,manager.OpenSettings),
                 Link(home,"Quit","Выйти из игры",.228f,.251f,525,nav.RequestExit)})
                 b.GetComponentInChildren<TMP_Text>().color=Ivory;
@@ -147,7 +149,7 @@ public static partial class OsowiecHeadquartersBuilder
             var sketch=Rect(home,"Journal plan",new(.306f,.43f),new(464,277));
             var map=sketch.gameObject.AddComponent<RawImage>();map.texture=CreateOperationMap().texture;map.raycastTarget=false;
             Type(home,"Pause place","Форт I   ·   Осовец",.313f,.255f,490,49,26,PaperInk);
-            Link(home,"Continue","Продолжить   →",.687f,.678f,490,manager.ResumeGame,true);
+            Link(home,"Continue","Продолжить",.687f,.678f,490,manager.ResumeGame,true);
             Link(home,"Settings","Настройки",.687f,.583f,490,manager.OpenSettings);
             Link(home,"Restart","Начать заново",.687f,.488f,490,manager.RestartGame);
             Link(home,"Return","Вернуться в штаб",.687f,.393f,490,prefs.ReturnToHeadquarters);
@@ -161,7 +163,7 @@ public static partial class OsowiecHeadquartersBuilder
             objectives.alignment=TextAlignmentOptions.TopLeft;
             Type(spread,"Trip title","Санитарная колонна",.675f,.765f,555,90,41,PaperInk);
             var status=Type(spread,"Current trip","",.675f,.55f,555,170,29,GhostInk);
-            Link(spread,"Close objectives","‹   Закрыть журнал",.67f,.30f,460,journal.Close,true);
+            Link(spread,"Close objectives","Закрыть журнал",.67f,.30f,460,journal.Close,true);
             journal.Bind(spread.gameObject,home.gameObject,objectives,status);
             spread.gameObject.SetActive(false);
         }
@@ -172,7 +174,7 @@ public static partial class OsowiecHeadquartersBuilder
         Link(settings,"Sound tab","Звук",.310f,.548f,480,nav.Audio);
         Link(settings,"Video tab","Изображение",.310f,.462f,480,nav.Picture);
         Link(settings,"Controls tab","Управление",.310f,.376f,480,nav.Controls);
-        Link(settings,"Close settings","‹   Готово",.310f,.237f,475,manager.ApplySettings,true);
+        Link(settings,"Close settings","Готово",.310f,.237f,475,manager.ApplySettings,true);
         var pages=new GameObject[3];
         var pageNames=new[]{"Громкость","Изображение","Управление"};
         for(int i=0;i<3;i++)

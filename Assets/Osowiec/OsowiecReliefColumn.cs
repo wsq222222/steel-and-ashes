@@ -11,13 +11,31 @@ public sealed class OsowiecReliefColumn : MonoBehaviour
     int requestedReserve, arrivedReserve, alarmArrivals;
     bool alarm;
     public bool AlarmRaised => alarm;
+    internal int ReinforcementCalls {get;private set;}
+    internal float ReinforcementNoticeUntil {get;private set;}
+    string reinforcementNotice;
+    void SignalReinforcement(string text)
+    {
+        reinforcementNotice=text;
+        ReinforcementNoticeUntil=Time.time+8f;
+        ReinforcementCalls++;
+        OsowiecAtmosphere.PlayReinforcement();
+    }
+    void DrawReinforcementNotice()
+    {
+        if(Time.time>=ReinforcementNoticeUntil || string.IsNullOrEmpty(reinforcementNotice))return;
+        float s=OsowiecHudPaint.Scale;
+        float width=Mathf.Min(535*s,Screen.width*.52f);
+        OsowiecHudPaint.Plate(new Rect((Screen.width-width)*.5f,Screen.height*.16f,width,47*s),
+            OsowiecMenuLanguage.Text(reinforcementNotice),true);
+    }
     public int GuardsArrived => alarmArrivals;
     public void SoundAlarm(Unit sentry = null, Unit seen = null)
     {
         if (alarm) return;
         alarm = true;
         nextArrivalCheck = Time.time + 2;
-        OsowiecHudPaint.Caption("Гудок караульни. Подкрепление на подходе.");
+        SignalReinforcement("Караул поднят. Подкрепление на подходе.");
         if (sentry && seen) OsowiecEnemyFireReadout.Alert(sentry, seen);
     }
     float nextArrivalCheck;
@@ -314,7 +332,9 @@ public sealed class OsowiecReliefColumn : MonoBehaviour
     {
         if (!StartRoad(throughMarsh)) return false;
         dispatchRequested=false;
-        requestedReserve=Mathf.Min(delivered+1,reserve.Length);
+        int requested=Mathf.Min(delivered+1,reserve.Length);
+        if(requested>requestedReserve)SignalReinforcement("Батарея вызвала резерв к обозу.");
+        requestedReserve=requested;
         Announce(marsh ? $"Рейс {delivered+1} идёт по северной насыпи в обход газа." : $"Рейс {delivered+1} идёт через каземат.");
         OsowiecAtmosphere.PlayOptics(position);
         return true;
@@ -854,10 +874,11 @@ public sealed class OsowiecReliefColumn : MonoBehaviour
 
     private void OnGUI()
     {
-        if(!Started || Complete)return;
         var cameraManager=CameraManager.Instance;
         var game=GameManager.Instance;
         if(game==null || cameraManager==null || game.IsPaused() || game.IsGameOver())return;
+        DrawReinforcementNotice();
+        if(!Started || Complete)return;
         bool fps=cameraManager.IsActionMode();
         var cam=fps?cameraManager.GetActionCamera():cameraManager.GetTacticalCamera();
         if(cam==null)return;

@@ -98,6 +98,8 @@ public static class OsowiecOperationBuilder
         foreach (var lamp in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             if (lamp.type == LightType.Directional) lamp.enabled = false;
         OsowiecEnvironment.Create();
+        OsowiecSignalLinesAndRuin.Install();
+        OsowiecCentralTrench.Install();
         OsowiecApproachClosures.Install();
         OsowiecAtmosphere.Create();
         OsowiecAtmosphere.SetGasBounds(OsowiecOperation.Gas);
@@ -150,6 +152,7 @@ public static class OsowiecOperationBuilder
             surface.navMeshData = oldNav;
         }
         VerifyPaths();
+        OsowiecCentralTrench.VerifyRoutes();
         OsowiecBatteryFort.VerifyPaths();
         if (rules.gate != null)
         {

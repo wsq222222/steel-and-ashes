@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
@@ -115,8 +115,8 @@ public class MissionSelectUI : MonoBehaviour
         if (currentIndex < 0 || currentIndex >= missions.Length) return;
 
         var m = missions[currentIndex];
-        missionNameText.text = m.displayName;
-        missionObjectiveText.text = m.objectiveShort;
+        missionNameText.text = OsowiecMenuLanguage.Text(m.displayName);
+        missionObjectiveText.text = OsowiecMenuLanguage.Text(m.objectiveShort);
         
         if (previewImage != null && m.previewSprite != null)
         {

@@ -32,11 +32,12 @@ public static class OsowiecHudPaint
         label ??= new GUIStyle(GUI.skin.label) { wordWrap = true };
         label.font = Body;
         label.fontSize = Mathf.RoundToInt(21 * Scale);
-        var content=new GUIContent(caption);
+        string localized=OsowiecMenuLanguage.Text(caption);
+        var content=new GUIContent(localized);
         float inset=22*Scale;
         float width=Mathf.Min(label.CalcSize(content).x+inset,Screen.width*.55f);
         float height=Mathf.Max(36*Scale,label.CalcHeight(content,width-inset)+6*Scale);
-        Plate(new Rect((Screen.width-width)*.5f,Screen.height-57*Scale-height,width,height),caption,true);
+        Plate(new Rect((Screen.width-width)*.5f,Screen.height-57*Scale-height,width,height),localized,true);
     }
 
     public static void Plate(Rect rect, string text, bool centered = false)
@@ -50,6 +51,23 @@ public static class OsowiecHudPaint
         label.alignment = centered ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
         float inset = 11 * Scale;
         GUI.Label(new Rect(rect.x + inset, rect.y, rect.width - inset * 2, rect.height), text, label);
+    }
+
+    // Keep the caption attached to its screen position while fitting its translated text.
+    public static Rect FittedPlate(Vector2 topCenter, string text, float maxWidth)
+    {
+        float s=Scale, inset=11*s, margin=8*s;
+        label ??= new GUIStyle(GUI.skin.label) { wordWrap=true };
+        label.font=Body;
+        label.fontSize=Mathf.RoundToInt(21*s);
+        var content=new GUIContent(text);
+        float room=Mathf.Max(1,Screen.width-margin*2);
+        float width=Mathf.Min(Mathf.Ceil(label.CalcSize(content).x)+2*inset+2, maxWidth, room);
+        float height=Mathf.Ceil(label.CalcHeight(content,Mathf.Max(1,width-2*inset)))+12*s;
+        var rect=new Rect(Mathf.Clamp(topCenter.x-width/2,margin,Screen.width-margin-width),
+                          Mathf.Clamp(topCenter.y,margin,Screen.height-margin-height),width,height);
+        Plate(rect,text,true);
+        return rect;
     }
 
     public static void Panel(Rect rect)

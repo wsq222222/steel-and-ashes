@@ -23,7 +23,7 @@ public class HubInteractionHintUI : MonoBehaviour
     public void ShowPrompt(string message = "Нажмите [E] на компьютер, чтобы выбрать миссию")
     {
         if (hintPanel == null) return;
-        if (hintText != null) hintText.text = message;
+        if (hintText != null) hintText.text = OsowiecMenuLanguage.Text(message);
         hintPanel.SetActive(true);
     }
 

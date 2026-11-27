@@ -4,11 +4,12 @@ public static class OsowiecKitProps
 {
     const string Models = "OsowiecKit/Models/";
     static Material finish;
+    static Texture2D gasFinish;
 
     public static GameObject Create(OsowiecKitItem item, Transform parent, Unit owner = null)
     {
         if (item == OsowiecKitItem.Rifle) return null;
-        var prefab = Resources.Load<GameObject>(Models + (item == OsowiecKitItem.Gas ? OsowiecKitItem.Smoke : item));
+        var prefab = Resources.Load<GameObject>(Models + item);
         if (!finish) finish = Resources.Load<Material>(Models + "FieldSurface");
         if (!prefab || !finish)
         {
@@ -47,8 +48,14 @@ public static class OsowiecKitProps
         }
         if(item == OsowiecKitItem.Gas || item == OsowiecKitItem.Grenade && owner && owner.chessType == ChessUnitType.Pawn)
         {
-            var color = item == OsowiecKitItem.Gas ? new Color(.55f,.66f,.26f) : new Color(.56f,.41f,.32f);
+            var color = item == OsowiecKitItem.Gas ? new Color(.94f,.98f,.83f) : new Color(.56f,.41f,.32f);
             var properties = new MaterialPropertyBlock();
+            if(item==OsowiecKitItem.Gas)
+            {
+                if(!gasFinish)gasFinish=Resources.Load<Texture2D>(Models+"FieldGasFinish");
+                properties.SetTexture("_BaseMap",gasFinish);
+                properties.SetTexture("_MainTex",gasFinish);
+            }
             properties.SetColor("_BaseColor", color);
             properties.SetColor("_Color", color);
             renderer.SetPropertyBlock(properties);

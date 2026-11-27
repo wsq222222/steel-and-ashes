@@ -216,7 +216,7 @@ public static class OsowiecFieldCast
         config.magazineSize = 5;
         config.startingAmmoInMag = config.magazineSize;
         config.startingReserveAmmo = 4 * config.magazineSize;
-        config.damagePerHit = modelName == "RamCarbine" ? 22 : modelName == "ObserverCarbine" ? 15 : 12;
+        config.damagePerHit = modelName == "RamCarbine" ? 51 : modelName == "ObserverCarbine" ? 57 : 46;
         EditorUtility.SetDirty(config);
         return config;
     }
@@ -379,17 +379,17 @@ public static class OsowiecFieldCast
             var info = new SerializedObject(unit);
             if (role != "Sentry")
             {
-                var (health, damage, speed) = role switch
+                var (health, speed) = role switch
                 {
-                    "Assault" => (125, 22, 3.6f),
-                    "Support" => (85, 12, 5.3f),
-                    _ => (100, 15, 4f)
+                    "Assault" => (125, 3.6f),
+                    "Support" => (85, 5.3f),
+                    _ => (100, 4f)
                 };
                 info.FindProperty("health").intValue = health;
                 info.FindProperty("maxHealth").intValue = health;
-                info.FindProperty("damage").intValue = damage;
                 info.FindProperty("moveSpeed").floatValue = speed;
             }
+            info.FindProperty("damage").intValue = rifle.Config.damagePerHit;
             Assign(info,"unitMoveSound",null);
             Assign(info,"takeDamageSound",AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Osowiec/Atmosphere/Resources/OsowiecSound/FieldInjury.wav"));
             Assign(info,"unitDeathSound",AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Osowiec/Atmosphere/Resources/OsowiecSound/FieldFall.wav"));

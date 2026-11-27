@@ -153,7 +153,7 @@ public static partial class OsowiecHeadquartersBuilder
 
         var spawn = new SerializedObject(bootstrap).FindProperty("spawnPoint").objectReferenceValue as Transform;
         if (spawn == null) throw new InvalidOperationException("Missing headquarters spawn point");
-        spawn.SetPositionAndRotation(new Vector3(0f, .08f, -3.8f), Quaternion.identity);
+        spawn.SetPositionAndRotation(new Vector3(-.22f, .97f, -8.05f), Quaternion.identity);
         EditorUtility.SetDirty(spawn);
         foreach (var avatar in roots.SelectMany(root => root.GetComponentsInChildren<Unit>(false)))
         {
@@ -172,62 +172,9 @@ public static partial class OsowiecHeadquartersBuilder
                 if (oldBody.TryGetComponent<MeshFilter>(out var meshFilter)) meshFilter.sharedMesh = null;
             }
         }
-        RenderSettings.ambientMode = AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(.29f, .25f, .20f);
         RenderSettings.fog = false;
-
-        var room = new GameObject("Timber signal dugout").transform;
-        var oak = MaterialAt("Oak", new(.19f, .126f, .075f), .22f);
-        var oakDark = MaterialAt("Oak shadow", new(.115f, .070f, .043f), .15f);
-        var boardA = MaterialAt("Larch", new(.24f, .165f, .103f), .25f);
-        var boardB = MaterialAt("Larch stained", new(.17f, .123f, .087f), .27f);
-        OsowiecDugoutArt.Grain(oak);
-        OsowiecDugoutArt.Grain(oakDark);
-        OsowiecDugoutArt.Grain(boardA, true);
-        OsowiecDugoutArt.Grain(boardB, true);
-        var mortar = MaterialAt("Earth brick", new(.205f, .145f, .109f), .26f);
-        var cloth = MaterialAt("Wool olive", new(.145f, .162f, .092f), .1f);
-        var steel = MaterialAt("Iron", new(.11f, .12f, .11f), .41f);
-
-        Slab(room, "Floor footing", new(0, -.16f, 0), new(9.2f, .32f, 12.3f), oakDark);
-        OsowiecDugoutArt.LayFloor(room, steel);
-        Slab(room, "Ceiling", new(0, 3.42f, 0), new(9.2f, .25f, 12.3f), oakDark);
-        for (int i = 0; i < 10; i++)
-            Slab(room, "Joist", new(0, 3.25f, -5.72f + i * 1.27f), new(9.1f, .2f, .24f), oak);
-        foreach (int side in new[] { -1, 1 })
-        {
-            Slab(room, "Side wall", new(side * 4.51f, 1.62f, 0), new(.28f, 3.35f, 12.3f), oakDark);
-            Slab(room, "Bulkhead", new(0, 1.62f, side * 6.04f), new(9.2f, 3.35f, .3f), mortar);
-            for (int row = 0; row < 12; row++)
-                Slab(room, "Timber shoring", new(side * 4.34f, .14f + row * .27f, 0), new(.14f, .255f, 12.25f),
-                    row % 3 == 0 ? boardB : boardA, false);
-            for (int i = 0; i < 5; i++)
-                Slab(room, "Wall buttress", new(side * 4.15f, 1.6f, -5.57f + i * 2.82f), new(.26f, 3.2f, .27f), oakDark);
-        }
-        for (int row = 0; row < 9; row++)
-        for (int brick = 0; brick < 19; brick++)
-        {
-            float x = -4.22f + brick * .46f + (row % 2) * .16f;
-            Slab(room, "End wall facing", new(x, .19f + row * .34f, 5.86f), new(.434f, .306f, .105f),
-                (brick + row) % 5 == 0 ? boardB : mortar, false);
-        }
+        var room = new GameObject("Osowiec command bunker").transform;
         OsowiecDugoutArt.Install(room, map);
-        for (int i = 0; i < 3; i++)
-        {
-            Slab(room, "Ammo crate", new(3.21f, .23f + i * .38f, 4.63f),
-                new(1.18f, .38f, .72f), i % 2 == 0 ? boardA : boardB);
-            Slab(room, "Crate band", new(3.21f, .28f + i * .38f, 4.247f), new(1.14f, .05f, .023f), steel, false);
-        }
-        foreach (float y in new[] { .43f, 1.38f })
-        {
-            Slab(room, "Bunk frame", new(-3.49f, y, 3.85f), new(1.16f, .15f, 2.29f), oak);
-            Slab(room, "Wool bedding", new(-3.49f, y + .11f, 3.85f), new(1.05f, .14f, 2.16f), cloth, false);
-        }
-        foreach (float x in new[] { -4.0f, -2.97f })
-        foreach (float z in new[] { 2.81f, 4.9f })
-            Slab(room, "Bunk rail", new(x, .8f, z), new(.13f, 1.6f, .13f), oakDark);
-
-        OsowiecArchitectureDetails.BakeHQ(room);
         var mesh = room.gameObject.AddComponent<NavMeshSurface>();
         mesh.collectObjects = CollectObjects.Children;
         mesh.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.PhysicsColliders;
@@ -251,60 +198,13 @@ public static partial class OsowiecHeadquartersBuilder
         return interaction;
     }
 
-    private static void Lantern(Transform parent, Vector3 origin, Material iron, Material flame, float power)
-    {
-        Slab(parent, "Lantern base", origin + new Vector3(0, .035f, 0), new(.24f, .07f, .22f), iron, false);
-        Slab(parent, "Lantern globe", origin + new Vector3(0, .164f, 0), new(.143f, .205f, .145f), flame, false);
-        Slab(parent, "Lantern cap", origin + new Vector3(0, .298f, 0), new(.224f, .065f, .22f), iron, false);
-        foreach (int x in new[] { -1, 1 })
-        foreach (int z in new[] { -1, 1 })
-            Slab(parent, "Lantern cage", origin + new Vector3(x * .093f, .167f, z * .081f), new(.025f, .237f, .026f), iron, false);
-        var light = new GameObject("Warm lantern light").AddComponent<Light>();
-        light.transform.SetParent(parent);
-        light.transform.position = origin + new Vector3(0, .23f, 0);
-        light.type = LightType.Point;
-        light.color = new Color(1f, .61f, .31f);
-        light.range = 5.5f;
-        light.intensity = power;
-    }
-
-    private static GameObject Slab(Transform parent, string name, Vector3 position, Vector3 scale, Material material,
-        bool collider = true)
-    {
-        var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        slab.name = name;
-        slab.transform.SetParent(parent);
-        slab.transform.localPosition = position;
-        slab.transform.localScale = scale;
-        slab.GetComponent<MeshRenderer>().sharedMaterial = material;
-        if (!collider) Object.DestroyImmediate(slab.GetComponent<BoxCollider>());
-        return slab;
-    }
-
-    private static Material MaterialAt(string name, Color color, float gloss)
-    {
-        string path = Folder + name + ".mat";
-        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-        var material = existing != null ? existing : new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        material.SetColor("_BaseColor", color);
-        material.SetFloat("_Smoothness", gloss);
-        if (existing == null) AssetDatabase.CreateAsset(material, path);
-        EditorUtility.SetDirty(material);
-        return material;
-    }
-
     internal static void RefreshDugoutLightAndGrain()
     {
-        var scene=EditorSceneManager.OpenScene(ScenePath,OpenSceneMode.Single);
-        var room=scene.GetRootGameObjects().Single(go=>go.name=="Timber signal dugout").transform;
-        OsowiecDugoutArt.LightDugout(room);
-        OsowiecDugoutArt.Grain(MaterialAt("Oak",new(.19f,.126f,.075f),.22f));
-        OsowiecDugoutArt.Grain(MaterialAt("Oak shadow",new(.115f,.070f,.043f),.15f));
-        OsowiecDugoutArt.Grain(MaterialAt("Larch",new(.24f,.165f,.103f),.25f),true);
-        OsowiecDugoutArt.Grain(MaterialAt("Larch stained",new(.17f,.123f,.087f),.27f),true);
-        OsowiecArchitectureDetails.SawnTimber();
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var room = scene.GetRootGameObjects().Single(go => go.name == "Osowiec command bunker");
+        OsowiecDugoutArt.LightDugout(room.transform);
         EditorSceneManager.MarkSceneDirty(scene);
-        if(!EditorSceneManager.SaveScene(scene))throw new InvalidOperationException("Could not save headquarters lighting.");
+        if (!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Could not save headquarters lighting.");
     }
 
     private static T Asset<T>(string name) where T : ScriptableObject

@@ -48,7 +48,7 @@ public sealed class OsowiecVideoJournal : MonoBehaviour
         TextAlignmentOptions align=TextAlignmentOptions.MidlineLeft)
     {
         var t=Rect(p,name,x,y,w,h).gameObject.AddComponent<TextMeshProUGUI>();
-        t.font=font;t.text=value;t.fontSize=size;t.alignment=align;t.color=col;t.raycastTarget=false;
+        t.font=font;t.text=OsowiecMenuLanguage.Text(value);t.fontSize=size;t.alignment=align;t.color=col;t.raycastTarget=false;
         t.textWrappingMode=TextWrappingModes.NoWrap;return t;
     }
     Button Button(Transform p,string name,string label,float x,float y,float w,float h,Action clicked,bool chosen=false)
@@ -75,10 +75,10 @@ public sealed class OsowiecVideoJournal : MonoBehaviour
             int y=140+row++*65;
             Text(content,id+" title",label,10,y,253,54,22,body,ink);
             var output=Text(content,id+" value","",289,y,167,54,22,body,ink,TextAlignmentOptions.Center);
-            var prev=Button(content,id+" prev","‹",252,y+6,38,42,()=>{change(-1);Refresh();});
-            var next=Button(content,id+" next","›",464,y+6,38,42,()=>{change(1);Refresh();});
+            var prev=Button(content,id+" prev","−",252,y+6,38,42,()=>{change(-1);Refresh();});
+            var next=Button(content,id+" next","+",464,y+6,38,42,()=>{change(1);Refresh();});
             Graphic(content,id+" rule",10,y+55,493,1,line);
-            updates.Add(()=>{output.text=get();prev.interactable=can?.Invoke(-1)??true;next.interactable=can?.Invoke(1)??true;});
+            updates.Add(()=>{output.text=OsowiecMenuLanguage.Text(get());prev.interactable=can?.Invoke(-1)??true;next.interactable=can?.Invoke(1)??true;});
         }
         void Setting(Option key,string label,Func<int,string> format)
         { Value(key.ToString(),label,()=>format(video.Get(key)),s=>video.Step(key,s),s=>video.CanStep(key,s)); }
@@ -101,8 +101,8 @@ public sealed class OsowiecVideoJournal : MonoBehaviour
                 bool verify=video.Confirming;
                 keep.gameObject.SetActive(verify);undo.gameObject.SetActive(verify);apply.gameObject.SetActive(!verify);
                 apply.interactable=Editable() && !video.Pending.Same(OsowiecVideoOptions.DisplayChoice.Actual());
-                if(!verify)timer.text=OsowiecVideoOptions.DisplayOverridden?"Размер окна задан при запуске.":
-                    !video.Pending.Same(OsowiecVideoOptions.DisplayChoice.Actual())?"Новый режим потребует подтверждения.":"";
+                if(!verify)timer.text=OsowiecMenuLanguage.Text(OsowiecVideoOptions.DisplayOverridden?"Размер окна задан при запуске.":
+                    !video.Pending.Same(OsowiecVideoOptions.DisplayChoice.Actual())?"Новый режим потребует подтверждения.":"");
             });
         }
         else if(section==1)
@@ -110,7 +110,7 @@ public sealed class OsowiecVideoJournal : MonoBehaviour
             Setting(Option.RenderScale,"Масштаб рендера",v=>v+"%");
             Setting(Option.Relief,"Рельеф вблизи",OnOff);
             Setting(Option.ShadowMap,"Тени солнца",v=>v.ToString());
-            Setting(Option.ShadowDistance,"Дальность теней",v=>v==0?"Выкл.":v+" м");
+            Setting(Option.ShadowDistance,"Дальность теней",v=>v==0?"Выкл.":OsowiecMenuLanguage.Format("{0} м",v));
             Setting(Option.AntiAliasing,"Сглаживание",v=>v switch{0=>"Выкл.",1=>"FXAA",_=>"SMAA"});
             Setting(Option.Textures,"Текстуры",v=>v switch{0=>"Полные",1=>"½ размера",_=>"¼ размера"});
         }
@@ -131,6 +131,9 @@ public sealed class OsowiecVideoJournal : MonoBehaviour
         Text(content,"Leaf number",$"{section+1} / 3",427,580,75,43,20,body,rust,TextAlignmentOptions.MidlineRight);
         Refresh();
     }
+    void OnEnable()=>OsowiecMenuLanguage.Changed+=LocaleChanged;
+    void OnDisable()=>OsowiecMenuLanguage.Changed-=LocaleChanged;
+    void LocaleChanged(){if(!sheet)return;sheet.Find("Video heading").GetComponent<TMP_Text>().text=OsowiecMenuLanguage.Text("Изображение");Draw(section,true);}
     public void Refresh(){foreach(var update in updates)update();}
-    void Update(){if(Visible && timer && video.Confirming)timer.text=$"Возврат через {Mathf.CeilToInt(video.ConfirmUntil-Time.realtimeSinceStartup)} с";}
+    void Update(){if(Visible && timer && video.Confirming)timer.text=OsowiecMenuLanguage.Format("Возврат через {0} с",Mathf.CeilToInt(video.ConfirmUntil-Time.realtimeSinceStartup));}
 }

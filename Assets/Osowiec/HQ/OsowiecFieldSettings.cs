@@ -66,6 +66,9 @@ public sealed class OsowiecFieldSettings : MonoBehaviour
     internal Toggle ShakeControl => reducedShake;
     internal const string OldDisplayKey=DisplayKey;
 
+    System.Action refreshCancel;
+    void OnDestroy(){if(refreshCancel!=null)OsowiecMenuLanguage.Changed-=refreshCancel;}
+
     void BindKitCancel()
     {
         if(!captions) return;
@@ -84,7 +87,11 @@ public sealed class OsowiecFieldSettings : MonoBehaviour
         if(row.graphic) row.graphic.enabled=false;
         var label=row.GetComponentInChildren<TMPro.TMP_Text>();
         if(!label) return;
-        void Refresh() => label.text="Отменить бросок или прыжок      "+OsowiecKitWheel.CancelName+"  ›";
+        void Refresh() => label.text=OsowiecMenuLanguage.Format("Отменить бросок или прыжок      {0}",OsowiecKitWheel.CancelName);
+        var inherited=label.GetComponent<UnityEngine.Localization.Components.LocalizeStringEvent>();
+        if(inherited){inherited.enabled=false;Destroy(inherited);}
+        OsowiecMenuLanguage.Changed+=Refresh;
+        refreshCancel=Refresh;
         Refresh();
         row.onValueChanged.AddListener(_=>{
             SaveInt("OsowiecKitCancel",(PlayerPrefs.GetInt("OsowiecKitCancel",0)+1)%3);

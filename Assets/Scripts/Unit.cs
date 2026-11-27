@@ -332,7 +332,16 @@ public class Unit : MonoBehaviour
             float lookScale = gameObject.scene.name is "Osowiec" or "OsowiecHQ"
                 ? OsowiecFieldSettings.LookMultiplier : 1f;
             if (OsowiecFieldKit.BlocksLook(this)) lookScale = 0;
-            float mouseY = lookInput.y * mouseSensitivity * lookScale;
+            // The observer stays planted while the optic follows the active field pointer.
+            Vector2 viewInput=lookInput;
+            if(OsowiecFieldKit.ScopeOpen && CameraManager.Instance.GetCurrentControlledUnit()==this)
+            {
+                if(Mouse.current!=null)viewInput=Mouse.current.delta.ReadValue();
+                var optical=CameraManager.Instance.GetActionCamera();
+                if(optical)lookScale*=Mathf.Tan(optical.fieldOfView*Mathf.Deg2Rad*.5f)/
+                    Mathf.Tan(OsowiecFieldSettings.FieldOfView*Mathf.Deg2Rad*.5f);
+            }
+            float mouseY = viewInput.y * mouseSensitivity * lookScale;
             if((gameObject.scene.name is "Osowiec" or "OsowiecHQ") && OsowiecFieldSettings.InvertY)
                 mouseY = -mouseY;
             xRotation -= mouseY;
@@ -342,7 +351,7 @@ public class Unit : MonoBehaviour
                 cameraAttachPoint.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
             }
 
-            float mouseX = lookInput.x * mouseSensitivity * lookScale;
+            float mouseX = viewInput.x * mouseSensitivity * lookScale;
             transform.Rotate(Vector3.up * mouseX);
         }
 
@@ -921,10 +930,10 @@ public class Unit : MonoBehaviour
     public void ConsumeMoveMeters(float meters)
     {
         if (meters <= 0f) return;
-        if (OsowiecPlanner.Instance && owner == Player.Player1 && isControlled)
+        if (OsowiecPlanner.Instance && FieldTurn.Activated)
         {
-            if (OsowiecMarch.Free(this)) return;
             FieldTurn.Walk(meters);
+            if (owner == Player.Player1 && isControlled && OsowiecMarch.Free(this)) return;
         }
         remainingMoveMeters = Mathf.Max(0f, remainingMoveMeters - meters);
 

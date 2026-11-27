@@ -248,7 +248,9 @@ public static class OsowiecEnvironment
         }
         else material.shader = shader;
         string diffuse = SurfaceDirectory + key + "_colour.jpg";
-        if (key == "Bank growth")
+        if (key == "River")
+            material.SetTexture("_FlowSurvey", AssetDatabase.LoadAssetAtPath<Texture2D>(SurfaceDirectory+"Biebrza channel flow.png"));
+        else if (key == "Bank growth")
         {
             foreach (string layer in new[] { "Earth", "Sod", "Till" })
             {
