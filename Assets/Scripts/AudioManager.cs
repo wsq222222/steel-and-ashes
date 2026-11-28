@@ -72,12 +72,7 @@ public class AudioManager : MonoBehaviour
 
     void Start()
     {
-        // Автоматически запускаем фоновую музыку игры только если мы в игровой сцене
-        // (не в главном меню, где уже есть своя музыка)
-        if (gameMusic != null && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "MainMenu")
-        {
-            PlayGameMusic();
-        }
+        PlayGameMusic();
     }
     
     void Update()

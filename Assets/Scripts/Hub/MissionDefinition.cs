@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "NewMission", menuName = "CyberGambit/Mission Definition")]
+[CreateAssetMenu(fileName = "NewMission", menuName = "Steel and Ashes/Mission Definition")]
 public class MissionDefinition : ScriptableObject
 {
     public string missionId;

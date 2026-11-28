@@ -823,8 +823,6 @@ public class BotController : MonoBehaviour
         yield return StartCoroutine(MoveTowardsWorldTargetByBudget(unit, effectiveTarget.transform.position, moveBudgetMeters));
     }
     
-    // Mission1 AI is implemented in Mission1BotBrain (Mission1 folder) to keep BotController mission-agnostic.
-
     private bool TryGetBestVisibleEnemyInAttackRange(Unit attacker, out Unit target)
     {
         target = null;

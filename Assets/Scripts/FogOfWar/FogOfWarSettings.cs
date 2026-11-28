@@ -6,7 +6,7 @@ public enum FogAppearanceMode
     TexturedAlbedo = 1
 }
 
-[CreateAssetMenu(fileName = "FogOfWarSettings", menuName = "CyberGambit/Fog Of War Settings")]
+[CreateAssetMenu(fileName = "FogOfWarSettings", menuName = "Steel and Ashes/Fog Of War Settings")]
 public class FogOfWarSettings : ScriptableObject
 {
     [Header("World bounds (XZ)")]

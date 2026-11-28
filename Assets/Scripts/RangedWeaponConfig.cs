@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "CyberGambit/Weapons/Ranged Weapon Config", fileName = "RangedWeaponConfig")]
+[CreateAssetMenu(menuName = "Steel and Ashes/Weapons/Ranged Weapon Config", fileName = "RangedWeaponConfig")]
 public class RangedWeaponConfig : ScriptableObject
 {
     [Header("Ballistics")]

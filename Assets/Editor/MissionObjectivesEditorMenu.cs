@@ -4,7 +4,7 @@ using UnityEngine;
 
 public static class MissionObjectivesEditorMenu
 {
-    [MenuItem("CyberGambit/Create Mission Quest Config")]
+    [MenuItem("Steel and Ashes/Create Mission Quest Config")]
     public static void CreateQuestConfig()
     {
         string path = EditorUtility.SaveFilePanelInProject(

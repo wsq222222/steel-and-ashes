@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Тексты целей миссии. Прогресс обновляется из кода через <see cref="MissionQuestUI"/>.
 /// </summary>
-[CreateAssetMenu(fileName = "MissionQuest", menuName = "CyberGambit/Mission Quest Config")]
+[CreateAssetMenu(fileName = "MissionQuest", menuName = "Steel and Ashes/Mission Quest Config")]
 public class MissionObjectivesConfig : ScriptableObject
 {
     [Tooltip("Заголовок панели.")]

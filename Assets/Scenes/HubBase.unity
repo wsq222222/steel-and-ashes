@@ -1577,9 +1577,7 @@ MonoBehaviour:
   missionObjectiveText: {fileID: 1172716325}
   previewImage: {fileID: 2141072375}
   missions:
-  - {fileID: 11400000, guid: dc024cbd5bb5d474e9f7cc2496ec8dc4, type: 2}
-  - {fileID: 11400000, guid: 6103e8e7ccd1d1b40905a72f2ef07ffc, type: 2}
-  - {fileID: 11400000, guid: 120069c441321394db053e02dcc08fdc, type: 2}
+  - {fileID: 11400000, guid: a5d1312a820d7b3448789211e3155b8c, type: 2}
 --- !u!224 &430503894
 RectTransform:
   m_ObjectHideFlags: 0

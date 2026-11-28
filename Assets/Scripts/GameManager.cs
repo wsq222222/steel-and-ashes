@@ -23,7 +23,7 @@ public class GameManager : MonoBehaviour
     private static bool gameModeSetFromMenu = false; // Флаг, что режим был установлен из меню
     
     [Header("Game Mode (для тестирования)")]
-    [Tooltip("Режим игры для тестирования. Используется только если игра запущена напрямую в SampleScene (не из MainMenu)")]
+    [Tooltip("Режим игры при прямом запуске сцены без предварительного выбора режима.")]
     [SerializeField] private GameMode testGameMode = GameMode.PlayerVsPlayer;
     [SerializeField] private bool allowUnitAbilities = true;
 
@@ -106,7 +106,6 @@ public class GameManager : MonoBehaviour
         if (FogOfWarManager.Instance != null)
             FogOfWarManager.Instance.ResetFog();
         FogWarIntelTracker.Instance?.ResetIntel();
-        EnemyIntelTracker.Instance?.ResetIntel();
         StartCoroutine(DetectForwardDirectionsAfterInit());
     }
 
@@ -319,7 +318,7 @@ public class GameManager : MonoBehaviour
     {
         if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
         Time.timeScale = 1f; // Возвращаем время в норму перед выходом
-        SceneManager.LoadScene("MainMenu");
+        SceneManager.LoadScene("OsowiecHQ");
     }
     // НОВОЕ: Метод рестарта (для кнопки "Рестарт")
     public void RestartGame()
@@ -446,7 +445,7 @@ public class GameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Устанавливает режим игры (вызывается из MainMenu)
+    /// Устанавливает режим игры перед загрузкой миссии.
     /// </summary>
     public static void SetGameMode(GameMode mode)
     {

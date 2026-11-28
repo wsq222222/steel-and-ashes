@@ -200,11 +200,10 @@ public static class OsowiecOperationBuilder
         }
         EditorSceneManager.SaveScene(scene, Mission, true);
         OsowiecHeadquartersBuilder.Generate();
-        var scenes = EditorBuildSettings.scenes.Where(item => item.path != Mission && item.path != Headquarters);
         EditorBuildSettings.scenes = new[] {
             new EditorBuildSettingsScene(Headquarters, true),
             new EditorBuildSettingsScene(Mission, true)
-        }.Concat(scenes).ToArray();
+        };
         AssetDatabase.SaveAssets();
         Debug.Log("Osowiec operation and headquarters scenes generated.");
     }

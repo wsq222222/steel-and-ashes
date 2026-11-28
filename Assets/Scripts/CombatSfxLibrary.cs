@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Дефолтные боевые клипы (Resources/CombatSfxLibrary). Подставляются, если на Weapon/Tank поля пустые.
 /// </summary>
-[CreateAssetMenu(fileName = "CombatSfxLibrary", menuName = "CyberGambit/Combat SFX Library")]
+[CreateAssetMenu(fileName = "CombatSfxLibrary", menuName = "Steel and Ashes/Combat SFX Library")]
 public class CombatSfxLibrary : ScriptableObject
 {
     [Header("Guardian (ракетчик)")]

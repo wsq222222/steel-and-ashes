@@ -1,6 +1,4 @@
-using Mission2;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public enum FogCellState
 {
@@ -16,8 +14,6 @@ public enum FogCellState
 public class FogOfWarManager : MonoBehaviour
 {
     public static FogOfWarManager Instance { get; private set; }
-
-    private static readonly string[] MissionSceneNames = { "mission1", "mission2" };
 
     [SerializeField] private FogOfWarSettings settings;
 
@@ -45,118 +41,6 @@ public class FogOfWarManager : MonoBehaviour
     public FogOfWarSettings Settings => settings;
     public Texture2D ExploredTexture => exploredTexture;
     public Texture2D VisibleTexture => visibleTexture;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void RegisterSceneCallbacks()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        TrySetupMissionScene(scene.name);
-    }
-
-    private static void TrySetupMissionScene(string sceneName)
-    {
-        if (string.IsNullOrEmpty(sceneName)) return;
-        bool isMission = false;
-        foreach (string n in MissionSceneNames)
-        {
-            if (sceneName.Equals(n, System.StringComparison.OrdinalIgnoreCase))
-            {
-                isMission = true;
-                break;
-            }
-        }
-
-        if (!isMission) return;
-
-        // Приоритет: FogOfWarSceneSetup на сцене → Resources по имени миссии → Default.
-        FogOfWarSettings sceneSettings = TryGetSceneAssignedSettings();
-        if (sceneSettings == null)
-            sceneSettings = ResolveSettingsForScene(sceneName);
-
-        if (Instance == null)
-            EnsureExists(sceneSettings);
-        else if (sceneSettings != null)
-            Instance.ApplySettings(sceneSettings);
-
-        FogWarIntelTracker.EnsureExists();
-        TagMissionObjectives();
-        AutoAttachEnemyVisibility();
-
-        if (Instance != null)
-            Instance.ResetFog();
-        FogWarIntelTracker.Instance?.ResetIntel();
-    }
-
-    /// <summary>Asset из FogOfWarSceneSetup на активной сцене (если назначен в Inspector).</summary>
-    private static FogOfWarSettings TryGetSceneAssignedSettings()
-    {
-        FogOfWarSceneSetup[] setups = Object.FindObjectsByType<FogOfWarSceneSetup>(FindObjectsInactive.Include);
-        foreach (FogOfWarSceneSetup setup in setups)
-        {
-            if (setup == null) continue;
-            FogOfWarSettings assigned = setup.AssignedSettings;
-            if (assigned != null)
-                return assigned;
-        }
-
-        return null;
-    }
-
-    private static FogOfWarSettings ResolveSettingsForScene(string sceneName)
-    {
-        if (sceneName.Equals("mission2", System.StringComparison.OrdinalIgnoreCase))
-        {
-            FogOfWarSettings m2 = Resources.Load<FogOfWarSettings>("FogOfWar/Mission2FogOfWarSettings");
-            if (m2 != null) return m2;
-        }
-
-        if (sceneName.Equals("mission1", System.StringComparison.OrdinalIgnoreCase))
-        {
-            FogOfWarSettings m1 = Resources.Load<FogOfWarSettings>("FogOfWar/Mission1FogOfWarSettings");
-            if (m1 != null) return m1;
-        }
-
-        return Resources.Load<FogOfWarSettings>("FogOfWar/DefaultFogOfWarSettings");
-    }
-
-    private static void TagMissionObjectives()
-    {
-        Mission1FlagZone[] flags = Object.FindObjectsByType<Mission1FlagZone>(FindObjectsInactive.Include);
-        foreach (Mission1FlagZone f in flags)
-            EnsureExempt(f != null ? f.gameObject : null);
-
-        DestructibleObjective[] objs = Object.FindObjectsByType<DestructibleObjective>(FindObjectsInactive.Include);
-        foreach (DestructibleObjective o in objs)
-            EnsureExempt(o != null ? o.gameObject : null);
-
-        Mission2.Mission2DefenseTerminal[] terminals =
-            Object.FindObjectsByType<Mission2.Mission2DefenseTerminal>(FindObjectsInactive.Include);
-        foreach (var t in terminals)
-            EnsureExempt(t != null ? t.gameObject : null);
-    }
-
-    private static void EnsureExempt(GameObject go)
-    {
-        if (go == null) return;
-        if (go.GetComponent<FogWarExempt>() == null)
-            go.AddComponent<FogWarExempt>();
-    }
-
-    private static void AutoAttachEnemyVisibility()
-    {
-        Unit[] units = Object.FindObjectsByType<Unit>(FindObjectsInactive.Include);
-        foreach (Unit u in units)
-        {
-            if (u == null || u.owner != Player.Player2) continue;
-            if (u.GetComponent<FogWarUnitVisibility>() == null)
-                u.gameObject.AddComponent<FogWarUnitVisibility>();
-        }
-    }
 
     public void ApplySettings(FogOfWarSettings newSettings)
     {
@@ -194,12 +78,7 @@ public class FogOfWarManager : MonoBehaviour
         }
 
         if (settings == null)
-        {
-            FogOfWarSettings sceneAssigned = TryGetSceneAssignedSettings();
-            settings = sceneAssigned != null
-                ? sceneAssigned
-                : Resources.Load<FogOfWarSettings>("FogOfWar/DefaultFogOfWarSettings");
-        }
+            settings = Resources.Load<FogOfWarSettings>("FogOfWar/DefaultFogOfWarSettings");
 
         InitializeTextures();
     }
