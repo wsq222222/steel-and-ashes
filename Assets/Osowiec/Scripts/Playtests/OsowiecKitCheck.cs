@@ -355,7 +355,7 @@ public sealed class OsowiecKitCheck : MonoBehaviour
         for(int i=0;i<6;i++) yield return null;
         var units=FindObjectsByType<Unit>(FindObjectsSortMode.InstanceID);
         actor=units.First(u=>u.owner==Player.Player1);
-        target=units.First(u=>u.owner==Player.Player2 && u.GetEquippedWeapon() && u.chessType==ChessUnitType.Молот);
+        target=units.First(u=>u.owner==Player.Player2 && u.GetEquippedWeapon() && u.chessType==ChessUnitType.Hammer);
         alternate=units.First(u=>u!=target && u.owner==Player.Player2 && u.GetHealth()>0 && u.GetComponent<CharacterController>());
         foreach(var u in units) if(u.owner==Player.Player2 && u!=target) u.gameObject.SetActive(false);
         // Reuse the visible, unobstructed trench fixture from the field HUD regression.

@@ -35,9 +35,16 @@ public sealed class OsowiecDeploymentReadout : MonoBehaviour
         areaTitle=title; areaOrder=order; switchButton=advance;
     }
 
-    void OnEnable() { if(switchButton) switchButton.onClick.AddListener(SwitchSector); }
+    void OnEnable()
+    {
+        if(switchButton) switchButton.onClick.AddListener(SwitchSector);
+        OsowiecMenuLanguage.Changed += InvalidateReadout;
+        InvalidateReadout();
+    }
+    void InvalidateReadout() => lastPoints = -1;
     void OnDisable()
     {
+        OsowiecMenuLanguage.Changed -= InvalidateReadout;
         if(switchButton) switchButton.onClick.RemoveListener(SwitchSector);
         CancelSelection();
     }
@@ -95,12 +102,7 @@ public sealed class OsowiecDeploymentReadout : MonoBehaviour
                 !deployment.IsCellInDeploymentZone(unit.currentGridPosition)) continue;
             int index=System.Array.IndexOf(deployment.Sectors.Current,unit.currentGridPosition);
             if(index<0) continue;
-            slots[index].text = unit.chessType switch
-            {
-                ChessUnitType.Молот => "М",
-                ChessUnitType.Циклоп => "Ц",
-                _ => "Г"
-            };
+            slots[index].text = OsowiecMenuLanguage.RosterMark(unit);
             count++;
         }
         capacity.text = $"Позиции  {count} / {slots.Length}";

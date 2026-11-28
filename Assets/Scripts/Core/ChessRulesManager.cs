@@ -4,12 +4,12 @@ using UnityEngine;
 // Existing prefabs and scenes store these numeric IDs.
 public enum ChessUnitType
 {
-    [InspectorName("Молот · Штурмовик")] Молот = 0,
+    [InspectorName("Hammer · Assault")] Hammer = 0,
     [InspectorName("Конь (шаблон)")] Horse = 1,
-    [InspectorName("Циклоп · Наблюдатель")] Циклоп = 2,
+    [InspectorName("Cyclops · Observer")] Cyclops = 2,
     [InspectorName("Ферзь (шаблон)")] Queen = 3,
     [InspectorName("Король (шаблон)")] King = 4,
-    [InspectorName("Гончая · Разведчик")] Гончая = 5
+    [InspectorName("Hound · Scout")] Hound = 5
 }
 
 public class ChessRulesManager : MonoBehaviour
@@ -78,7 +78,7 @@ public class ChessRulesManager : MonoBehaviour
         
         switch (type)
         {
-            case ChessUnitType.Молот: // Пешка
+            case ChessUnitType.Hammer: // Пешка
                 // Для упрощения, просто проверяем, что она идет на 1 клетку вперед по оси Y (или 2, если первый ход)
                 if (dx == 1 && dy == 0) return true; 
                 if (isFirstMove && dx == 2 && dy == 0) return true;
@@ -87,10 +87,10 @@ public class ChessRulesManager : MonoBehaviour
             case ChessUnitType.Horse: // Конь (2 в одну сторону, 1 в другую) - буква Г
                 return (dx == 1 && dy == 2) || (dx == 2 && dy == 1);
 
-            case ChessUnitType.Гончая: // Ладья (Только вертикально или горизонтально)
+            case ChessUnitType.Hound: // Ладья (Только вертикально или горизонтально)
                 return (dx == 0 || dy == 0);
 
-            case ChessUnitType.Циклоп: // Слон (Только по диагонали)
+            case ChessUnitType.Cyclops: // Слон (Только по диагонали)
                 return (dx == dy);
 
             case ChessUnitType.Queen: // Ферзь (Ладья + Слон)

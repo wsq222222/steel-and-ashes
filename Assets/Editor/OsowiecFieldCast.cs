@@ -317,7 +317,7 @@ public static class OsowiecFieldCast
         finally { Object.DestroyImmediate(root); }
     }
 
-    public static string EnemyPath(string ally) => ally.Replace(".prefab", "-Противник.prefab");
+    public static string EnemyPath(string ally) => ally.Replace(".prefab", "-Enemy.prefab");
 
     public static string BuildUnit(ChessUnitType soldier, string uniform, Weapon rifle)
     {
@@ -326,8 +326,15 @@ public static class OsowiecFieldCast
         if (!template || !template.TryGetComponent<Unit>(out var unit) || unit.chessType != soldier || !rifle)
             throw new InvalidOperationException("Missing or mismatched unit template or weapon for " + name);
         string path = OsowiecProjectPaths.Prefab(name);
-        UnitPrefab(template, name, rifle, uniform, path);
-        UnitPrefab(template, name, rifle, "Sentry", EnemyPath(path));
+        string displayKey = soldier switch
+        {
+            ChessUnitType.Hammer => "Молот",
+            ChessUnitType.Cyclops => "Циклоп",
+            ChessUnitType.Hound => "Гончая",
+            _ => throw new ArgumentOutOfRangeException(nameof(soldier), soldier, "Unknown field callsign")
+        };
+        UnitPrefab(template, displayKey, rifle, uniform, path);
+        UnitPrefab(template, displayKey, rifle, "Sentry", EnemyPath(path));
         return path;
     }
 

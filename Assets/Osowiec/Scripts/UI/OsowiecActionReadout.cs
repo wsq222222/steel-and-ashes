@@ -40,7 +40,7 @@ public static class OsowiecActionReadout
         if(book) GUI.DrawTextureWithTexCoords(rect,book,new Rect(.17f,.27f,.25f,.39f));
         else OsowiecHudPaint.Fill(rect,new Color(.82f,.75f,.59f));
         OsowiecHudPaint.Fill(new Rect(0,0,5,110),Red);
-        string role=actor.chessType==ChessUnitType.Молот?"Штурмовик":actor.chessType==ChessUnitType.Циклоп?"Наблюдатель":"Разведчик";
+        string role=actor.chessType==ChessUnitType.Hammer?"Штурмовик":actor.chessType==ChessUnitType.Cyclops?"Наблюдатель":"Разведчик";
         Print(new Rect(14,3,176,31),actor.GetUnitDisplayName(),24,Brown,true);
         Print(new Rect(189,7,171,23),actor.FieldTurn.Observed ? OsowiecMenuLanguage.Text("×2 с 10 м · до 84") : role,17,
             actor.FieldTurn.Observed ? Green : Dull);

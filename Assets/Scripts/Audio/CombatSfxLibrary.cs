@@ -7,7 +7,7 @@ using UnityEngine.Serialization;
 [CreateAssetMenu(fileName = "CombatSfxLibrary", menuName = "Steel and Ashes/Combat SFX Library")]
 public class CombatSfxLibrary : ScriptableObject
 {
-    [Header("Гончая")]
+    [Header("Hound")]
     [FormerlySerializedAs("guardianFire")]
     public AudioClip scoutFire;
     [FormerlySerializedAs("guardianReload")]

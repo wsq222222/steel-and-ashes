@@ -22,8 +22,8 @@ public sealed class OsowiecEnemyFireReadout : MonoBehaviour
         if (!visible && !friendlyHit) return;
         active.spot = friendlyHit ? end : start;
         active.showSpot = true;
-        active.notice = friendlyHit ? shooter.GetUnitDisplayName() + " → " + hit.GetUnitDisplayName() + (loss>0 ? "  −"+Mathf.CeilToInt(loss)+" ОЗ" : "  ·  попадание")
-                                    : shooter.GetUnitDisplayName()+"  ·  выстрел";
+        active.notice = friendlyHit ? shooter.GetLocalizedDisplayName() + " → " + hit.GetLocalizedDisplayName() + (loss>0 ? "  −"+Mathf.CeilToInt(loss)+" ОЗ" : "  ·  попадание")
+                                    : shooter.GetLocalizedDisplayName()+"  ·  выстрел";
         active.remaining=1.65f;
     }
 
@@ -40,7 +40,7 @@ public sealed class OsowiecEnemyFireReadout : MonoBehaviour
     public static void Alert(Unit sentry, Unit seen)
     {
         if (!active || Time.time < active.casualtyUntil) return;
-        active.notice = sentry.GetUnitDisplayName() + " заметил бойца «"+seen.GetUnitDisplayName()+"». Вызван караул";
+        active.notice = sentry.GetLocalizedDisplayName() + " заметил бойца «"+seen.GetLocalizedDisplayName()+"». Вызван караул";
         active.showSpot = false;
         active.remaining = 3;
     }
@@ -48,7 +48,7 @@ public sealed class OsowiecEnemyFireReadout : MonoBehaviour
     public static void Intercept(Unit sentry)
     {
         if (!active || Time.time < active.casualtyUntil || !OsowiecOperation.Instance.SquadSees(sentry)) return;
-        active.notice = sentry.GetUnitDisplayName() + " идёт к повозке";
+        active.notice = sentry.GetLocalizedDisplayName() + " идёт к повозке";
         active.showSpot = false;
         active.remaining = 2;
     }
@@ -86,7 +86,7 @@ public sealed class OsowiecEnemyFireReadout : MonoBehaviour
                 side = Mathf.Abs(relative.x) > Mathf.Abs(relative.z) ? (relative.x > 0 ? "справа" : "слева") :
                     (relative.z > 0 ? "впереди" : "сзади");
             }
-            message = source.GetUnitDisplayName()+" · "+side+" · под прицелом «"+threatened.GetUnitDisplayName()+
+            message = source.GetLocalizedDisplayName()+" · "+side+" · под прицелом «"+threatened.GetLocalizedDisplayName()+
                 "» · "+op.ThreatSeconds(threatened).ToString("0.0")+" с";
         }
         var content=new GUIContent(message);

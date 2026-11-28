@@ -47,10 +47,10 @@ public class BotController : MonoBehaviour
     private static readonly Dictionary<ChessUnitType, int> PieceValues = new Dictionary<ChessUnitType, int>
     {
         { ChessUnitType.Queen, 9 },
-        { ChessUnitType.Гончая, 5 },
-        { ChessUnitType.Циклоп, 3 },
+        { ChessUnitType.Hound, 5 },
+        { ChessUnitType.Cyclops, 3 },
         { ChessUnitType.Horse, 3 },
-        { ChessUnitType.Молот, 1 },
+        { ChessUnitType.Hammer, 1 },
         { ChessUnitType.King, 100 }
     };
 
@@ -652,7 +652,7 @@ public class BotController : MonoBehaviour
         if (potentialEnemy == null || !potentialEnemy.IsTankUnit) return true;
         if (potentialEnemy.owner != Player.Player1) return true;
         if (attacker == null || attacker.owner != Player.Player2) return true;
-        return attacker.chessType == ChessUnitType.Гончая;
+        return attacker.chessType == ChessUnitType.Hound;
     }
 
     /// <summary>
@@ -666,7 +666,7 @@ public class BotController : MonoBehaviour
         }
 
         if (attacker.owner == Player.Player2 && target.owner == Player.Player1 && target.IsTankUnit &&
-            attacker.chessType != ChessUnitType.Гончая)
+            attacker.chessType != ChessUnitType.Hound)
             yield break;
 
         // Если у атакующего есть экипированное оружие — атакуем огнестрелом (hitscan) без рывка/WeaponCollider.

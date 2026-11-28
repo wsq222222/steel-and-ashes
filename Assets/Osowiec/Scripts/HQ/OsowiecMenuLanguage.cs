@@ -23,6 +23,19 @@ public sealed class OsowiecMenuLanguage : MonoBehaviour
     public static string Format(string source,params object[] values) =>
         string.Format(Text(source),values);
 
+    internal static string RosterMark(Unit unit)
+    {
+        string name = unit.GetLocalizedDisplayName();
+        // Both English callsigns start with H; their stamps must stay distinguishable.
+        return name switch
+        {
+            nameof(ChessUnitType.Hammer) => "Ha",
+            nameof(ChessUnitType.Hound) => "Ho",
+            "" => "·",
+            _ => name.Substring(0, 1)
+        };
+    }
+
     IEnumerator Start()
     {
         LocalizationSettings.SelectedLocaleChanged += LoadLocale;

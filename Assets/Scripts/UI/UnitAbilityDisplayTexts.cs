@@ -8,11 +8,11 @@ public static class UnitAbilityDisplayTexts
         switch (type)
         {
             case ChessUnitType.Horse: return "JUMP";
-            case ChessUnitType.Циклоп: return "DEFLECT";
-            case ChessUnitType.Гончая: return "SHIELD";
+            case ChessUnitType.Cyclops: return "DEFLECT";
+            case ChessUnitType.Hound: return "SHIELD";
             case ChessUnitType.Queen: return "BOOST";
             case ChessUnitType.King: return "HEAL";
-            case ChessUnitType.Молот: return "—";
+            case ChessUnitType.Hammer: return "—";
             default: return "ABILITY";
         }
     }
@@ -21,13 +21,13 @@ public static class UnitAbilityDisplayTexts
     {
         switch (type)
         {
-            case ChessUnitType.Молот:
+            case ChessUnitType.Hammer:
                 return "В этом режиме у Молота нет активной способности.";
             case ChessUnitType.Horse:
                 return "Телепортация на ближайшую валидную клетку в направлении взгляда.";
-            case ChessUnitType.Циклоп:
+            case ChessUnitType.Cyclops:
                 return "Отражает входящий урон обратно атакующему на следующий ход врага.";
-            case ChessUnitType.Гончая:
+            case ChessUnitType.Hound:
                 return "Снижает входящий урон на 50% на следующий ход врага.";
             case ChessUnitType.Queen:
                 return "Увеличивает урон на 20% в текущем ходу.";

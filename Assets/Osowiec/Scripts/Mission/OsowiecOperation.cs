@@ -445,8 +445,8 @@ public sealed class OsowiecOperation : MonoBehaviour
     {
         if (!victim || victim.owner != Player.Player1) return;
         string reason = cause ?? (source ? "выстрел" : "ранение");
-        if (source) reason += " · " + source.GetUnitDisplayName();
-        LastLoss = victim.GetUnitDisplayName() + " погиб · " + reason;
+        if (source) reason += " · " + source.GetLocalizedDisplayName();
+        LastLoss = victim.GetLocalizedDisplayName() + " погиб · " + reason;
         OsowiecEnemyFireReadout.Casualty(victim, LastLoss);
         var cameras = CameraManager.Instance;
         if (cameras && cameras.IsActionMode() && cameras.GetCurrentControlledUnit() == victim)
@@ -778,7 +778,7 @@ public sealed class OsowiecOperation : MonoBehaviour
                 GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), maskOverlay);
             stress.Draw(unit,state.mask,state.pressure,state.visor.Fog,state.visor.WipeProgress);
             string note = OsowiecFieldKit.HoldPosition(unit) && !OsowiecFieldKit.ScopeOpen ? "Действие завершено   ·   Ход по Tab" :
-                OsowiecGroundEvents.InWire(unit.transform.position) ? (unit.chessType == ChessUnitType.Молот ? "Проволока   ·   Q расчистить" : "Проволока замедляет движение") :
+                OsowiecGroundEvents.InWire(unit.transform.position) ? (unit.chessType == ChessUnitType.Hammer ? "Проволока   ·   Q расчистить" : "Проволока замедляет движение") :
                 !approached && Near(unit, Telephone) ? "E   ·   Полевой телефон" :
                 securedEntry && !NorthOnline && Near(unit, NorthLine) ? "E   ·   Северный ввод" :
                 securedEntry && !SouthOnline && Near(unit, SouthLine) ? "E   ·   Южный ввод" :

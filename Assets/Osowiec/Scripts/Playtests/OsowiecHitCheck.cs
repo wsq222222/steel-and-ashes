@@ -81,7 +81,7 @@ public sealed class OsowiecHitCheck : MonoBehaviour
             presentation.SetBodyVisualVisible(false);
             presentation.SetBodyVisualVisible(true);
             var shell = unit.GetComponentsInChildren<OsowiecHitPart>().SingleOrDefault(p => p.area == OsowiecHitArea.Helmet);
-            int expected = unit.owner == Player.Player2 || unit.chessType != ChessUnitType.Гончая ? 1 : 0;
+            int expected = unit.owner == Player.Player2 || unit.chessType != ChessUnitType.Hound ? 1 : 0;
             Require((shell != null) == (expected == 1), "Wrong headgear " + template.name);
             CheckWornShell(unit, expected);
             if (shell)
@@ -230,7 +230,7 @@ public sealed class OsowiecHitCheck : MonoBehaviour
         plate.SetActive(false);
         Destroy(plate);
         Shoot(shooter,patient,trunk);
-        Require(Mathf.Abs(initial-patient.GetHealth()-shooter.GetEquippedWeapon().Config.damagePerHit)<=(shooter.chessType==ChessUnitType.Молот?2:1) && patient.GetHealth()>0,"Carbine body damage");
+        Require(Mathf.Abs(initial-patient.GetHealth()-shooter.GetEquippedWeapon().Config.damagePerHit)<=(shooter.chessType==ChessUnitType.Hammer?2:1) && patient.GetHealth()>0,"Carbine body damage");
         patient = Target();
         Shoot(marksman,patient,Center(Part(patient,OsowiecHitArea.Torso)));
         Require(patient.GetHealth()==initial-Damage(marksman,OsowiecHitArea.Torso) && patient.GetHealth()>0,"Marksman torso incorrectly lethal");

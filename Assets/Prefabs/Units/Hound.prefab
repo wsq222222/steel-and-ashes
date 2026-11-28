@@ -550,7 +550,7 @@ GameObject:
   - component: {fileID: 1129197593429422393}
   - component: {fileID: 583967705767080914}
   m_Layer: 3
-  m_Name: "\u0413\u043E\u043D\u0447\u0430\u044F"
+  m_Name: Hound
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18684,7 +18684,7 @@ GameObject:
   - component: {fileID: -3203295036173068742}
   - component: {fileID: -7531796894689040034}
   m_Layer: 3
-  m_Name: "\u0413\u043E\u043D\u0447\u0430\u044F"
+  m_Name: Hound
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

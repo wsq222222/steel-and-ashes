@@ -96,7 +96,7 @@ public class Unit : MonoBehaviour
     private bool unitMoveSoundPlaying;
     private bool externalMoveSoundActive;
 
-    [Header("Циклоп — запасные звуки оружия")]
+    [Header("Cyclops — fallback weapon sounds")]
     [FormerlySerializedAs("bishopFireSound")]
     [SerializeField] private AudioClip observerFireSound;
     [FormerlySerializedAs("bishopReloadSound")]
@@ -1106,7 +1106,7 @@ public class Unit : MonoBehaviour
                 SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
                 // Если ход был легален (isMoveLegal == true в последнем Update), 
                 // можно пометить isFirstMove = false для пешек.
-                if (chessType == ChessUnitType.Молот && startGridPosition != currentGridPosition)
+                if (chessType == ChessUnitType.Hammer && startGridPosition != currentGridPosition)
                 {
                     // Учитываем первый ход по клеткам
                     isFirstMove = false;
@@ -1144,6 +1144,8 @@ public class Unit : MonoBehaviour
     {
         return unitDisplayNameOverride ?? string.Empty;
     }
+
+    public string GetLocalizedDisplayName() => OsowiecMenuLanguage.Text(GetUnitDisplayName());
 
     public Sprite GetTacticalPortrait()
     {

@@ -51,7 +51,7 @@ public sealed class OsowiecBootContact : MonoBehaviour
         var pose=body.GetCurrentAnimatorStateInfo(0);
         bool inWalk=pose.IsName("Base Layer.Walk") || pose.IsName("Base Layer.Run");
         int half=Mathf.FloorToInt(pose.normalizedTime*2f);
-        float stride=actor.chessType==ChessUnitType.Молот ? .73f : .82f;
+        float stride=actor.chessType==ChessUnitType.Hammer ? .73f : .82f;
         if (Time.time<nextContact) return;
         bool useLeft=(half&1)==0;
         bool newPlant=inWalk && half!=lastHalf && (contacts==0 || useLeft!=lastWasLeft);
@@ -84,7 +84,7 @@ public sealed class OsowiecBootContact : MonoBehaviour
         if (++contacts%7==1)
         {
             string id=actor.chessType switch {
-                ChessUnitType.Молот=>"KitHarness", ChessUnitType.Гончая=>"KitGaiter", _=>"KitOpticCase" };
+                ChessUnitType.Hammer=>"KitHarness", ChessUnitType.Hound=>"KitGaiter", _=>"KitOpticCase" };
             kit.transform.position=previous+Vector3.up*.84f;
             kit.PlayOneShot(OsowiecSoundBank.Clip(id),volume*.12f);
         }

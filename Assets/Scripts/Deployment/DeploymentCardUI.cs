@@ -15,10 +15,26 @@ public class DeploymentCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     private ArmyDeploymentController controller;
     private int offerIndex;
+    private GameObject offeredPrefab;
     private Canvas rootCanvas;
     private RectTransform dragGhost;
     public bool LastDropSucceeded { get; private set; }
     public string LastDropMessage { get; private set; }
+
+    private void OnEnable()
+    {
+        OsowiecMenuLanguage.Changed += RefreshTitle;
+        RefreshTitle();
+    }
+
+    private void RefreshTitle()
+    {
+        if (titleText == null) return;
+        string name = offeredPrefab && offeredPrefab.TryGetComponent<Unit>(out var unit)
+            ? unit.GetLocalizedDisplayName() : null;
+        titleText.text = !string.IsNullOrEmpty(name) ? name :
+            offeredPrefab ? offeredPrefab.name.Replace("(Clone)", "").Trim() : "?";
+    }
 
     /// <summary> Создание карточки из кода (без префаба): назначить ссылки на Image/TMP. </summary>
     public void SetRuntimeRefs(Image icon, TMP_Text title, TMP_Text cost)
@@ -32,9 +48,8 @@ public class DeploymentCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     {
         controller = ctrl;
         offerIndex = index;
-
-        if (titleText != null)
-            titleText.text = offer.unitPrefab != null ? offer.unitPrefab.name.Replace("(Clone)", "").Trim() : "?";
+        offeredPrefab = offer.unitPrefab;
+        RefreshTitle();
         if (costText != null)
             costText.text = offer.costPoints.ToString();
 
@@ -107,7 +122,11 @@ public class DeploymentCardUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         }
     }
 
-    void OnDisable() { if(dragGhost) dragGhost.gameObject.SetActive(false); }
+    private void OnDisable()
+    {
+        OsowiecMenuLanguage.Changed -= RefreshTitle;
+        if (dragGhost) dragGhost.gameObject.SetActive(false);
+    }
     void OnDestroy() { if(dragGhost) Destroy(dragGhost.gameObject); }
 
     public void OnEndDrag(PointerEventData eventData)

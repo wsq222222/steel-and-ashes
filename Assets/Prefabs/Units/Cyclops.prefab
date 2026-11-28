@@ -5318,7 +5318,7 @@ GameObject:
   - component: {fileID: 8187022934830834004}
   - component: {fileID: 6646014376843896052}
   m_Layer: 0
-  m_Name: "\u0426\u0438\u043A\u043B\u043E\u043F"
+  m_Name: Cyclops
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7967,7 +7967,7 @@ GameObject:
   - component: {fileID: -5064905208343261603}
   - component: {fileID: -3036424525815405329}
   m_Layer: 0
-  m_Name: "\u0426\u0438\u043A\u043B\u043E\u043F"
+  m_Name: Cyclops
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

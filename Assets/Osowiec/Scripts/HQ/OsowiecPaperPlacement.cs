@@ -115,7 +115,7 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
             var unit=entry.unitPrefab.GetComponent<Unit>();
             var kit=unit.GetComponent<OsowiecCastMotion>();
             string ability=kit?kit.PerkDescription(unit.chessType):"";
-            string role=unit.chessType switch {ChessUnitType.Молот=>"Штурмовик",ChessUnitType.Циклоп=>"Наблюдатель",_=>"Разведчик"};
+            string role=unit.chessType switch {ChessUnitType.Hammer=>"Штурмовик",ChessUnitType.Cyclops=>"Наблюдатель",_=>"Разведчик"};
             detail.text=Format("{0} · {1} · {2:0} м\n{3}",Text(unit.GetUnitDisplayName()),Text(role),OsowiecPlanner.MoveBudget(unit),Text(ability));
         }
     }
@@ -210,7 +210,7 @@ public sealed class OsowiecPaperPlacement : MonoBehaviour
             if(outline)outline.enabled=!unit;
             if(!unit)continue;
             count++;
-            int column=unit.chessType switch{ChessUnitType.Молот=>0,ChessUnitType.Циклоп=>1,_=>2};
+            int column=unit.chessType switch{ChessUnitType.Hammer=>0,ChessUnitType.Cyclops=>1,_=>2};
             image.uvRect=Portrait(column);
         }
         for(int i=0;i<rows.Length;i++)rows[i].color=i==selected?new Color(.69f,.60f,.44f):Blank;

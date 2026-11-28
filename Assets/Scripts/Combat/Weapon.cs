@@ -242,7 +242,7 @@ public class Weapon : MonoBehaviour
         ammoInMag = Mathf.Max(0, ammoInMag - 1);
 
         // Звук перезарядки после выстрела — только у Гончей и танка. Циклоп перезаряжается по R или при пустом магазине.
-        if (owner != null && owner.chessType == ChessUnitType.Гончая && ownerUnit != null)
+        if (owner != null && owner.chessType == ChessUnitType.Hound && ownerUnit != null)
             ownerUnit.SchedulePostFireWeaponAudio(this, postFireReloadSoundDelay);
         else
             TryAutoReloadIfEmpty();
@@ -341,7 +341,7 @@ public class Weapon : MonoBehaviour
         CombatSfxLibrary lib = CombatSfxLibrary.Instance;
         if (ownerUnit != null && lib != null)
         {
-            if (ownerUnit.chessType == ChessUnitType.Гончая && lib.GetScoutFire() != null)
+            if (ownerUnit.chessType == ChessUnitType.Hound && lib.GetScoutFire() != null)
                 return lib.GetScoutFire();
         }
 
@@ -356,7 +356,7 @@ public class Weapon : MonoBehaviour
         CombatSfxLibrary lib = CombatSfxLibrary.Instance;
         if (ownerUnit != null && lib != null)
         {
-            if (ownerUnit.chessType == ChessUnitType.Гончая && lib.GetScoutReload() != null)
+            if (ownerUnit.chessType == ChessUnitType.Hound && lib.GetScoutReload() != null)
                 return lib.GetScoutReload();
         }
 

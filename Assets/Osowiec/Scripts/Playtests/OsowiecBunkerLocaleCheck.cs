@@ -102,6 +102,14 @@ public static class OsowiecBunkerLocaleCheck
                 yield return Until(Correct,"Deployment did not fully switch to "+code);
                 for(int i=0;i<8;i++)yield return null;
                 if(!Correct())throw new InvalidOperationException("Locale overwritten on subsequent frames: "+code);
+                var callsigns=en?new[]{"Hammer","Cyclops","Hound"}:new[]{"Молот","Циклоп","Гончая"};
+                for(int i=0;i<callsigns.Length;i++)
+                {
+                    roster.SelectOffer(i);
+                    if(Label($"Roster {i}/Role name").text!=callsigns[i] ||
+                        !description.text.StartsWith(callsigns[i]+" · ",StringComparison.Ordinal))
+                        throw new InvalidOperationException($"Incorrect {code} callsign on roster row {i}");
+                }
                 string counts=Regex.Replace(supply.text,@"[^0-9/]+"," ").Trim();
                 if(initialCounts==null)initialCounts=counts;
                 if(counts!=initialCounts)throw new InvalidOperationException("Locale switch changed deployment values");

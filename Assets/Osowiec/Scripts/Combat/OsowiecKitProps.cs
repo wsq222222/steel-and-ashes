@@ -27,7 +27,7 @@ public static class OsowiecKitProps
             OsowiecKitItem.Bayonet => .293f,
             OsowiecKitItem.Gas => .189f,
             OsowiecKitItem.Smoke => .154f,
-            OsowiecKitItem.Grenade when owner && owner.chessType==ChessUnitType.Молот => .17f,
+            OsowiecKitItem.Grenade when owner && owner.chessType==ChessUnitType.Hammer => .17f,
             _ => .144f
         };
         float importedHeight = renderer.bounds.size.y;
@@ -46,7 +46,7 @@ public static class OsowiecKitProps
             ring.transform.localScale=visual.transform.localScale;
             ring.transform.localPosition=new Vector3(.014f,height*.55f,-.006f);
         }
-        if(item == OsowiecKitItem.Gas || item == OsowiecKitItem.Grenade && owner && owner.chessType == ChessUnitType.Молот)
+        if(item == OsowiecKitItem.Gas || item == OsowiecKitItem.Grenade && owner && owner.chessType == ChessUnitType.Hammer)
         {
             var color = item == OsowiecKitItem.Gas ? new Color(.94f,.98f,.83f) : new Color(.56f,.41f,.32f);
             var properties = new MaterialPropertyBlock();

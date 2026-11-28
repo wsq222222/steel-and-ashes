@@ -56,10 +56,10 @@ public class UnitAbilities : MonoBehaviour
             case ChessUnitType.Horse:
                 ActivateHorseJump();
                 break;
-            case ChessUnitType.Циклоп:
+            case ChessUnitType.Cyclops:
                 ActivateReflection();
                 break;
-            case ChessUnitType.Гончая:
+            case ChessUnitType.Hound:
                 ActivateShield();
                 break;
             case ChessUnitType.Queen:
@@ -68,7 +68,7 @@ public class UnitAbilities : MonoBehaviour
             case ChessUnitType.King:
                 ActivateKingHeal();
                 break;
-            case ChessUnitType.Молот:
+            case ChessUnitType.Hammer:
                 // В шаблонном режиме активной способности нет
                 break;
         }
@@ -325,8 +325,8 @@ public class UnitAbilities : MonoBehaviour
         switch (unit.chessType)
         {
             case ChessUnitType.Horse: return cooldownHorseJump;
-            case ChessUnitType.Циклоп: return reflectionCooldown;
-            case ChessUnitType.Гончая: return shieldCooldown;
+            case ChessUnitType.Cyclops: return reflectionCooldown;
+            case ChessUnitType.Hound: return shieldCooldown;
             case ChessUnitType.Queen: return cooldownQueenDamageBoost;
             case ChessUnitType.King: return cooldownKingHeal;
             default: return 0;
@@ -349,8 +349,8 @@ public class UnitAbilities : MonoBehaviour
         switch (unit.chessType)
         {
             case ChessUnitType.Horse: cooldownHorseJump = turns; break;
-            case ChessUnitType.Циклоп: reflectionCooldown = turns; break;
-            case ChessUnitType.Гончая: shieldCooldown = turns; break;
+            case ChessUnitType.Cyclops: reflectionCooldown = turns; break;
+            case ChessUnitType.Hound: shieldCooldown = turns; break;
             case ChessUnitType.Queen: cooldownQueenDamageBoost = turns; break;
             case ChessUnitType.King: cooldownKingHeal = turns; break;
         }

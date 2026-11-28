@@ -60,9 +60,9 @@ public static class OsowiecFieldCastReview
 
     static string IssuedModel(Unit unit) => unit.chessType switch
     {
-        ChessUnitType.Молот => "RamCarbine",
-        ChessUnitType.Циклоп => "ObserverCarbine",
-        ChessUnitType.Гончая => "RunnerCarbine",
+        ChessUnitType.Hammer => "RamCarbine",
+        ChessUnitType.Cyclops => "ObserverCarbine",
+        ChessUnitType.Hound => "RunnerCarbine",
         _ => throw new InvalidOperationException("No Osowiec presentation assigned to " + unit.chessType)
     };
 
@@ -105,7 +105,7 @@ public static class OsowiecFieldCastReview
     [MenuItem("Steel and Ashes/Verify issued ammunition")]
     public static void VerifyAmmunition()
     {
-        foreach(var role in new[] {ChessUnitType.Молот, ChessUnitType.Циклоп, ChessUnitType.Гончая})
+        foreach(var role in new[] {ChessUnitType.Hammer, ChessUnitType.Cyclops, ChessUnitType.Hound})
         {
             var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(OsowiecProjectPaths.Prefab(role.ToString()));
             Require(prefab, "missing unit prefab for " + role);
@@ -210,7 +210,8 @@ public static class OsowiecFieldCastReview
         try
         {
             string[] roles={"Assault","Scout","Support"};
-            ChessUnitType[] soldiers={ChessUnitType.Молот, ChessUnitType.Циклоп, ChessUnitType.Гончая};
+            ChessUnitType[] soldiers={ChessUnitType.Hammer, ChessUnitType.Cyclops, ChessUnitType.Hound};
+            string[] displayKeys={"Молот","Циклоп","Гончая"};
             int[] costs={5,4,3};
             var deploy=ComponentIn<ArmyDeploymentController>(scene);
             var data=new SerializedObject(deploy);
@@ -225,7 +226,7 @@ public static class OsowiecFieldCastReview
                 Require(obj && AssetGuid(obj)==FileGuid(path),"deployment uses wrong prefab "+roles[i]);
                 Require(offer.FindPropertyRelative("costPoints").intValue==costs[i],"incorrect price "+roles[i]);
                 Require(obj.name==name && obj.GetComponent<Unit>().chessType==soldiers[i] &&
-                    obj.GetComponent<Unit>().GetUnitDisplayName()==name,"incorrect deployment identity "+name);
+                    obj.GetComponent<Unit>().GetUnitDisplayName()==displayKeys[i],"incorrect deployment identity "+name);
                 Actor(obj,roles[i]);
                 var enemy=AssetDatabase.LoadAssetAtPath<GameObject>(OsowiecFieldCast.EnemyPath(path));
                 Require(enemy && enemy.GetComponent<Unit>().chessType==soldiers[i],"incorrect sentry identity "+name);

@@ -321,7 +321,7 @@ public sealed class OsowiecFieldCheck : MonoBehaviour
             Time.timeScale=1;
         }
         var units=FindObjectsByType<Unit>(FindObjectsSortMode.InstanceID);
-        var npc=units.First(u=>u.owner==Player.Player2 && u.GetEquippedWeapon() && u.chessType==ChessUnitType.Молот);
+        var npc=units.First(u=>u.owner==Player.Player2 && u.GetEquippedWeapon() && u.chessType==ChessUnitType.Hammer);
         foreach(var u in units) if(u.owner==Player.Player2 && u!=npc) u.gameObject.SetActive(false);
         Move(npc,new Vector3(-45,.11f,-16),Vector3.right);
         Move(player,new Vector3(-38,.11f,-16),Vector3.left);

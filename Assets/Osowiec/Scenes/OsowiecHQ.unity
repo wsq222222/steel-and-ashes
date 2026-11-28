@@ -23076,7 +23076,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5526962948719103936, guid: 14218ca3766c2254180dd3d7937b55bd, type: 3}
       propertyPath: m_Name
-      value: "\u0426\u0438\u043A\u043B\u043E\u043F"
+      value: Cyclops
       objectReference: {fileID: 0}
     - target: {fileID: 6695986115786977592, guid: 14218ca3766c2254180dd3d7937b55bd, type: 3}
       propertyPath: equippedWeapon

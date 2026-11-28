@@ -41,9 +41,9 @@ public static class OsowiecOperationBuilder
         grid.cellSize = 1;
         Set(grid, so => so.FindProperty("originPosition").vector3Value = new Vector3(-53, 0, -32));
         OsowiecFieldCast.Prepare();
-        var infantry = OsowiecFieldCast.BuildUnit(ChessUnitType.Молот, "Assault", OsowiecFieldCast.BuildWeapon("RamCarbine"));
-        var rifleman = OsowiecFieldCast.BuildUnit(ChessUnitType.Циклоп, "Scout", OsowiecFieldCast.BuildWeapon("ObserverCarbine"));
-        var support = OsowiecFieldCast.BuildUnit(ChessUnitType.Гончая, "Support", OsowiecFieldCast.BuildWeapon("RunnerCarbine"));
+        var infantry = OsowiecFieldCast.BuildUnit(ChessUnitType.Hammer, "Assault", OsowiecFieldCast.BuildWeapon("RamCarbine"));
+        var rifleman = OsowiecFieldCast.BuildUnit(ChessUnitType.Cyclops, "Scout", OsowiecFieldCast.BuildWeapon("ObserverCarbine"));
+        var support = OsowiecFieldCast.BuildUnit(ChessUnitType.Hound, "Support", OsowiecFieldCast.BuildWeapon("RunnerCarbine"));
         var game = Required<GameManager>();
         Set(game, so =>
         {

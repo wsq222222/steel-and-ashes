@@ -134,7 +134,7 @@ public sealed class OsowiecBotBrain : MonoBehaviour, IBotMissionBrain
             unit.FieldTurn.Activated = true;
             bool escaping = OsowiecOperation.InGas(unit);
             bool heard = TryGetHeardSector(unit,out _);
-            bool scout = unit.chessType == ChessUnitType.Гончая;
+            bool scout = unit.chessType == ChessUnitType.Hound;
             float roleBudget = moveBudgetMeters;
             if (scout && (escaping || heard || watch.visible) && OsowiecOperation.Instance.Pressure(unit) <= .65f)
                 roleBudget += OsowiecFieldTurn.SprintBonus;
@@ -240,7 +240,7 @@ public sealed class OsowiecBotBrain : MonoBehaviour, IBotMissionBrain
         var tool=unit.GetEquippedWeapon();
         if(!tool || !tool.Config) return 0;
         float preferred=unit.chessType switch {
-            ChessUnitType.Молот => assaultReach, ChessUnitType.Гончая => scoutReach, _ => supportReach
+            ChessUnitType.Hammer => assaultReach, ChessUnitType.Hound => scoutReach, _ => supportReach
         };
         return Mathf.Min(preferred,tool.Config.maxHitRangeMeters);
     }

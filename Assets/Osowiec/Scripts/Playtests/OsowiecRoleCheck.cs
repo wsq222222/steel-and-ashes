@@ -19,9 +19,9 @@ internal static class OsowiecRoleCheck
         // This test passes the opposing side deterministically after each normal player activation.
         GameManager.SetGameMode(GameMode.PlayerVsPlayer);
         var team = Object.FindObjectsByType<Unit>(FindObjectsSortMode.None).Where(u => u.owner == Player.Player1).ToArray();
-        var hammer = team.Single(u => u.chessType == ChessUnitType.Молот);
-        var observer = team.Single(u => u.chessType == ChessUnitType.Циклоп);
-        var hound = team.Single(u => u.chessType == ChessUnitType.Гончая);
+        var hammer = team.Single(u => u.chessType == ChessUnitType.Hammer);
+        var observer = team.Single(u => u.chessType == ChessUnitType.Cyclops);
+        var hound = team.Single(u => u.chessType == ChessUnitType.Hound);
         var planner = OsowiecPlanner.Instance;
         var camera = CameraManager.Instance;
         void EndTurn()

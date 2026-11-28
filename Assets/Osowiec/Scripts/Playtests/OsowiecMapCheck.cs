@@ -242,7 +242,7 @@ public sealed class OsowiecMapCheck : MonoBehaviour
         yield return new WaitForEndOfFrame();SaveFrame("01-расстановка");
         roster.Confirm();for(int i=0;i<4;i++)yield return null;
         var planner=OsowiecPlanner.Instance;
-        var unit=FindObjectsByType<Unit>(FindObjectsSortMode.None).First(u=>u.owner==Player.Player1 && u.chessType==ChessUnitType.Молот);
+        var unit=FindObjectsByType<Unit>(FindObjectsSortMode.None).First(u=>u.owner==Player.Player1 && u.chessType==ChessUnitType.Hammer);
         planner.Select(unit);
         var keys=InputSystem.AddDevice<Keyboard>();keys.MakeCurrent();
         InputSystem.QueueStateEvent(keys,new KeyboardState(Key.M));yield return null;yield return null;
@@ -330,7 +330,7 @@ public sealed class OsowiecMapCheck : MonoBehaviour
         {
             var weapon=ally.GetEquippedWeapon();
             var skin=weapon.Config.firstPersonPrefab;
-            if(!skin || weapon.Config.isMarksmanRifle!=(ally.chessType==ChessUnitType.Циклоп))
+            if(!skin || weapon.Config.isMarksmanRifle!=(ally.chessType==ChessUnitType.Cyclops))
                 throw new InvalidOperationException($"Role assignment missing for {ally.name}");
             var thirdPersonMesh=weapon.GetComponentsInChildren<MeshFilter>(true).First(m=>m.name=="Field_carbine").sharedMesh;
             if(!actualModels.Add(thirdPersonMesh)) throw new InvalidOperationException("Allies share the same exterior mesh.");

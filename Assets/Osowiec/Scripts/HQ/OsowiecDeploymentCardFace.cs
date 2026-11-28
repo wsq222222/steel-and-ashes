@@ -20,6 +20,7 @@ public sealed class OsowiecDeploymentCardFace : MonoBehaviour, IPointerEnterHand
     private ArmyDeploymentController deployment;
     private OsowiecDeploymentReadout readout;
     private DeploymentOfferEntry offer;
+    private Unit unit;
 
     public void Bind(TMP_Text titleText, TMP_Text descText, TMP_Text roleMark, Image background,
         Image underlyingIcon, Sprite ghostSprite, Color normal, Color highlight, RawImage fieldPhoto = null)
@@ -40,28 +41,34 @@ public sealed class OsowiecDeploymentCardFace : MonoBehaviour, IPointerEnterHand
         deployment = FindFirstObjectByType<ArmyDeploymentController>();
         readout = GetComponentInParent<OsowiecDeploymentReadout>();
         if (deployment == null || !deployment.TryGetOffer(transform.GetSiblingIndex(), out offer)) return;
-        var unit = offer.unitPrefab.GetComponent<Unit>();
+        unit = offer.unitPrefab.GetComponent<Unit>();
         if (unit == null) return;
-        title.text = unit.GetUnitDisplayName();
-        mark.text = unit.chessType switch
-        {
-            ChessUnitType.Молот => "М",
-            ChessUnitType.Циклоп => "Ц",
-            ChessUnitType.Гончая => "Г",
-            _ => "О"
-        };
+        RefreshMark();
         description.text = $"{OsowiecPlanner.MoveBudget(unit):0} м / ход";
         if (portrait != null) portrait.sprite = dragMark;
         if (photograph != null)
         {
             int column = unit.chessType switch
             {
-                ChessUnitType.Циклоп => 1,
-                ChessUnitType.Гончая => 2,
+                ChessUnitType.Cyclops => 1,
+                ChessUnitType.Hound => 2,
                 _ => 0
             };
             photograph.uvRect = new Rect(column / 3f + .033f, 0f, .267f, 1f);
         }
+    }
+
+    private void OnEnable()
+    {
+        OsowiecMenuLanguage.Changed += RefreshMark;
+        RefreshMark();
+    }
+
+    private void OnDisable() => OsowiecMenuLanguage.Changed -= RefreshMark;
+
+    private void RefreshMark()
+    {
+        if (unit && mark) mark.text = OsowiecMenuLanguage.RosterMark(unit);
     }
 
     public void OnPointerEnter(PointerEventData eventData)

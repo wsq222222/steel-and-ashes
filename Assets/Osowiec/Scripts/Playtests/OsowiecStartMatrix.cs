@@ -103,8 +103,8 @@ public sealed class OsowiecStartMatrix : MonoBehaviour
                 Check(deployment.TryPlaceOfferAtGridCell(0,Cell) && deployment.TryPlaceOfferAtGridCell(1,occupied),
                     "failed to spawn both real capsules");
                 var squad=FindObjectsByType<Unit>(FindObjectsSortMode.None).Where(u=>u.owner==Player.Player1).ToArray();
-                actor=squad.Single(u=>u.chessType==ChessUnitType.Молот);
-                neighbour=squad.Single(u=>u.chessType==ChessUnitType.Циклоп);
+                actor=squad.Single(u=>u.chessType==ChessUnitType.Hammer);
+                neighbour=squad.Single(u=>u.chessType==ChessUnitType.Cyclops);
                 var sheet=FindFirstObjectByType<OsowiecPaperPlacement>();
                 Check(sheet,"deployment sheet missing");
                 sheet.Confirm();

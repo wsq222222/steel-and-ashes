@@ -39,8 +39,8 @@ public sealed class OsowiecPlanner : MonoBehaviour
 
     internal static float FullBudget(Unit unit) => unit.chessType switch
     {
-        ChessUnitType.Молот => 15,
-        ChessUnitType.Гончая => 24,
+        ChessUnitType.Hammer => 15,
+        ChessUnitType.Hound => 24,
         _ => 18
     };
 
@@ -404,7 +404,7 @@ public sealed class OsowiecPlanner : MonoBehaviour
         float x = dock.x + 14 * scale;
         if (selected != null && selected.GetHealth() > 0 && portraits != null)
         {
-            int column = selected.chessType switch { ChessUnitType.Молот => 0, ChessUnitType.Циклоп => 2, _ => 1 };
+            int column = selected.chessType switch { ChessUnitType.Hammer => 0, ChessUnitType.Cyclops => 2, _ => 1 };
             GUI.DrawTextureWithTexCoords(new Rect(x, dock.y + 13 * scale, 88 * scale, 88 * scale), portraits,
                 new Rect(column / 3f, 0, 1 / 3f, 1));
             x += 103 * scale;
@@ -417,7 +417,7 @@ public sealed class OsowiecPlanner : MonoBehaviour
         var condition=hasUnit?new OsowiecMapVitals(selected):default;
         OsowiecHudPaint.Text(new Rect(x,dock.y+11*scale,width,21*scale),
             hasUnit?condition.Summary:"ТАКТИЧЕСКИЙ ПРИКАЗ",15,hasUnit && condition.Critical?warning:brass,true);
-        string title = !hasUnit ? "Выберите бойца на карте" : selected.GetUnitDisplayName();
+        string title = !hasUnit ? "Выберите бойца на карте" : selected.GetLocalizedDisplayName();
         OsowiecHudPaint.Text(new Rect(x, dock.y + 34 * scale, width, 31 * scale), title, 24, paper, true);
         string detail = !hasUnit ? "ЛКМ или 1–3 — боец     M — бумажный план" :
             path == null ? (free ? "Марш" : $"Запас сил на ход {budget:F1} м") + "   ·   ЛКМ — точка     F — к цели" :

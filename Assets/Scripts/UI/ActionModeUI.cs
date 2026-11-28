@@ -287,7 +287,7 @@ public class ActionModeUI : MonoBehaviour
             }
             
             if (enemyNameText != null)
-                enemyNameText.text = OsowiecOperation.Instance != null ? targetUnit.GetUnitDisplayName() :
+                enemyNameText.text = OsowiecOperation.Instance != null ? targetUnit.GetLocalizedDisplayName() :
                     GetUnitDisplayName(targetUnit.chessType);
         }
         else if (damageableTarget != null && currentControlledUnit != null && damageableTarget.Owner != currentControlledUnit.owner)
@@ -327,7 +327,7 @@ public class ActionModeUI : MonoBehaviour
         
         if (controlledUnit != null)
         {
-            if (controlledUnit.chessType == ChessUnitType.Молот)
+            if (controlledUnit.chessType == ChessUnitType.Hammer)
             {
                 if (abilityPanel.activeSelf)
                     abilityPanel.SetActive(false);
@@ -354,7 +354,7 @@ public class ActionModeUI : MonoBehaviour
     {
         if (unit == null) return;
         
-        if (unit.chessType == ChessUnitType.Молот)
+        if (unit.chessType == ChessUnitType.Hammer)
         {
             if (abilityPanel != null && abilityPanel.activeSelf)
                 abilityPanel.SetActive(false);
@@ -533,10 +533,10 @@ public class ActionModeUI : MonoBehaviour
     {
         switch (type)
         {
-            case ChessUnitType.Молот: return nameof(ChessUnitType.Молот);
+            case ChessUnitType.Hammer: return OsowiecMenuLanguage.Text("Молот");
             case ChessUnitType.Horse: return "Конь";
-            case ChessUnitType.Циклоп: return nameof(ChessUnitType.Циклоп);
-            case ChessUnitType.Гончая: return nameof(ChessUnitType.Гончая);
+            case ChessUnitType.Cyclops: return OsowiecMenuLanguage.Text("Циклоп");
+            case ChessUnitType.Hound: return OsowiecMenuLanguage.Text("Гончая");
             case ChessUnitType.Queen: return "Ферзь";
             case ChessUnitType.King: return "Король";
             default: return "Неизвестно";
@@ -548,8 +548,8 @@ public class ActionModeUI : MonoBehaviour
         switch (type)
         {
             case ChessUnitType.Horse: return "Скачок";
-            case ChessUnitType.Циклоп: return "Отражение";
-            case ChessUnitType.Гончая: return "Щит";
+            case ChessUnitType.Cyclops: return "Отражение";
+            case ChessUnitType.Hound: return "Щит";
             case ChessUnitType.Queen: return "Усиление";
             case ChessUnitType.King: return "Исцеление";
             default: return "Нет способности";
@@ -562,9 +562,9 @@ public class ActionModeUI : MonoBehaviour
         {
             case ChessUnitType.Horse:
                 return "Телепортация на ближайшую валидную клетку в направлении взгляда";
-            case ChessUnitType.Циклоп:
+            case ChessUnitType.Cyclops:
                 return "Отражает весь входящий урон обратно атакующему";
-            case ChessUnitType.Гончая:
+            case ChessUnitType.Hound:
                 return "Снижает входящий урон на 50%";
             case ChessUnitType.Queen:
                 return "Увеличивает урон на 20%";

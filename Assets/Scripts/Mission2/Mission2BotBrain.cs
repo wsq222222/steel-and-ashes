@@ -205,7 +205,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
     {
         if (unit == null || tankUnit == null) return float.NegativeInfinity;
 
-        bool needsFlank = soloTank && unit.chessType != ChessUnitType.Гончая;
+        bool needsFlank = soloTank && unit.chessType != ChessUnitType.Hound;
         Vector3 anchor = needsFlank
             ? GetNearestPressureAnchorWorld(unit.transform.position, tankUnit)
             : tankUnit.transform.position;
@@ -231,7 +231,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
                 score += meleeReachBonus;
         }
 
-        if (unit.chessType == ChessUnitType.Гончая)
+        if (unit.chessType == ChessUnitType.Hound)
         {
             if (soloTank)
                 score += antiTankSoloBonus;
@@ -270,7 +270,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
 
         float maxR = Mathf.Max(0.1f, w.Config.maxHitRangeMeters);
         float dist = HorizontalDistance(selected.transform.position, targetPos);
-        bool hasAntiTankTarget = selected.chessType == ChessUnitType.Гончая && chosenTarget.IsTankUnit;
+        bool hasAntiTankTarget = selected.chessType == ChessUnitType.Hound && chosenTarget.IsTankUnit;
         bool canSee = controller != null && controller.CanSeeTargetForBrain(selected, chosenTarget);
 
         float standoff = Mathf.Clamp(w.Config.maxHitRangeMeters * 0.8f, rangedPreferredMinDistance, rangedPreferredMaxDistance);
@@ -289,7 +289,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
     private Unit ChooseTarget(Unit[] allUnits, Unit tankUnit, Unit attacker)
     {
         if (allUnits == null || tankUnit == null) return tankUnit;
-        if (attacker != null && attacker.chessType == ChessUnitType.Гончая)
+        if (attacker != null && attacker.chessType == ChessUnitType.Hound)
             return tankUnit;
 
         var footmen = allUnits

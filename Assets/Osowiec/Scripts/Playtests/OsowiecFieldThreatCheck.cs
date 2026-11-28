@@ -165,7 +165,7 @@ public sealed class OsowiecFieldThreatCheck : MonoBehaviour
         planner.ConfirmOrder();
         Require(op.LocalViewUnit()==player, "Casualty fixture missing first-person view");
         player.TakeDamage(10000,npc);
-        Require(CameraManager.Instance.IsActionMode() && !game.IsGameOver() && op.LastLoss.Contains(npc.GetUnitDisplayName()),
+        Require(CameraManager.Instance.IsActionMode() && !game.IsGameOver() && op.LastLoss.Contains(npc.GetLocalizedDisplayName()),
             "View switched before showing the source of the loss");
         if(output!=null)
         {

@@ -907,7 +907,7 @@ GameObject:
   - component: {fileID: 3280771149212503309}
   - component: {fileID: 7829185785057713769}
   m_Layer: 3
-  m_Name: "\u0413\u043E\u043D\u0447\u0430\u044F-\u041F\u0440\u043E\u0442\u0438\u0432\u043D\u0438\u043A"
+  m_Name: Hound-Enemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
