@@ -131,8 +131,8 @@ public static class OsowiecBunkerLocalisation
         EditorUtility.SetDirty(addressables);
         AssetDatabase.SaveAssets();
         OsowiecHeadquartersBuilder.UpdateDeploymentSheet();
-        BindScene("Assets/Osowiec/OsowiecHQ.unity",russian);
-        BindScene("Assets/Osowiec/Osowiec.unity",russian);
+        BindScene(OsowiecProjectPaths.HeadquartersScene,russian);
+        BindScene(OsowiecProjectPaths.OperationScene,russian);
         AssetDatabase.SaveAssets();
         Debug.Log($"Bunker localisation: {russian.Count} strings, {Graphics.Length-(MenuPairExists?0:1)} artwork pairs, ru/en.");
     }

@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 // Export the actual playfield geometry for the printed operations sheet.
 public static class OsowiecBriefingSurvey
 {
-    const string Field = "Assets/Osowiec/Osowiec.unity";
+    const string Field = OsowiecProjectPaths.OperationScene;
     [Serializable] class Survey
     {
         public int left=-60,right=56,bottom=-32,top=34,columns=261,rows=149;

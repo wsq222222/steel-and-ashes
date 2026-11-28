@@ -363,13 +363,13 @@ public static class OsowiecArchitectureDetails
             edit(scene);EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
             if(opened)EditorSceneManager.CloseScene(scene,true);
         }
-        PatchScene("Assets/Osowiec/Osowiec.unity",scene=>
+        PatchScene(OsowiecProjectPaths.OperationScene,scene=>
         {
             var cut=scene.GetRootGameObjects().SelectMany(go=>go.GetComponentsInChildren<OsowiecFortCutaway>(true)).Single();
             var stone=BakeFort(cut.transform);
             cut.surfaces=cut.surfaces.Where(r=>r && r!=stone).Append(stone).ToArray();EditorUtility.SetDirty(cut);
         });
-        PatchScene("Assets/Osowiec/OsowiecHQ.unity",scene=>
+        PatchScene(OsowiecProjectPaths.HeadquartersScene,scene=>
         {
             var room=scene.GetRootGameObjects().FirstOrDefault(go=>go.name=="Timber signal dugout");
             if(room) BakeHQ(room.transform); // Only the legacy timber room uses the procedural bake.

@@ -7,7 +7,7 @@ public static class OsowiecGateReview
 {
     public static void Verify()
     {
-        const string path="Assets/Osowiec/Osowiec.unity";
+        const string path=OsowiecProjectPaths.OperationScene;
         var scene=SceneManager.GetSceneByPath(path);
         bool opened=!scene.isLoaded;
         if(opened) scene=EditorSceneManager.OpenScene(path,OpenSceneMode.Additive);

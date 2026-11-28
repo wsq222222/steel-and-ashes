@@ -13,7 +13,7 @@ using Object = UnityEngine.Object;
 public static class OsowiecFieldCastReview
 {
     const string Folder = OsowiecFieldCast.Folder;
-    const string Mission = "Assets/Osowiec/Osowiec.unity";
+    const string Mission = OsowiecProjectPaths.OperationScene;
 
     static void Require(bool ok, string details)
     {
@@ -24,7 +24,7 @@ public static class OsowiecFieldCastReview
         AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(asset)) : "";
     static string FileGuid(string file)
     {
-        string guid = AssetDatabase.AssetPathToGUID(Folder + file);
+        string guid = AssetDatabase.AssetPathToGUID(file);
         Require(!string.IsNullOrEmpty(guid),"missing " + file);
         return guid;
     }
@@ -35,7 +35,7 @@ public static class OsowiecFieldCastReview
 
     static void Meshes(GameObject visual, params string[] files)
     {
-        var allowed = new HashSet<string>(files.Select(FileGuid));
+        var allowed = new HashSet<string>(files.Select(file => FileGuid(Folder + file)));
         var found = new HashSet<string>();
         var renderers = new HashSet<Renderer>(visual.GetComponentsInChildren<Renderer>(true));
         foreach (var group in visual.GetComponentsInChildren<LODGroup>(true))
@@ -55,7 +55,7 @@ public static class OsowiecFieldCastReview
                 Require(mat != null && AssetDatabase.GetAssetPath(mat).StartsWith(Folder+"Game/",StringComparison.Ordinal),
                     visual.name + "/" + renderer.name + " unexpected material");
         }
-        Require(found.SetEquals(allowed),visual.name + " missing expected FBX renderer");
+        Require(found.SetEquals(allowed),visual.name + " missing expected mesh");
     }
 
     static string IssuedModel(Unit unit) => unit.chessType switch
@@ -68,20 +68,37 @@ public static class OsowiecFieldCastReview
 
     static void Actor(GameObject model,string role)
     {
+        Require(model, "missing actor for " + role);
         var unit=model.GetComponent<Unit>();
+        Require(unit && unit.GetEquippedWeapon() && unit.GetEquippedWeapon().Muzzle,
+            model.name+" missing weapon or muzzle binding");
         string expectedWeapon=IssuedModel(unit);
-        Meshes(model,role+".fbx",expectedWeapon+".fbx");
+        var shells = model.GetComponentsInChildren<OsowiecHitPart>(true)
+            .Where(part => part.area == OsowiecHitArea.Helmet).ToArray();
+        if (role == "Support")
+        {
+            Require(shells.Length == 0, model.name + " has an unexpected issued helmet");
+            Meshes(model,role+".fbx",expectedWeapon+".fbx");
+        }
+        else
+        {
+            string helmet = "Game/" + role + "-Helmet.asset";
+            Require(shells.Length == 1, model.name + " requires one issued helmet");
+            var shell = shells[0];
+            var filter = shell.GetComponent<MeshFilter>();
+            Require(filter && filter.sharedMesh == shell.helmetMesh && AssetGuid(shell.helmetMesh) == FileGuid(Folder + helmet),
+                model.name + " helmet renderer and hit part must use the issued " + role + " mesh");
+            Meshes(model,role+".fbx",expectedWeapon+".fbx",helmet);
+        }
         var appearance=unit.GetEquippedWeapon().Config.firstPersonPrefab;
         Require(appearance,model.name+" missing first-person variant");
         Meshes(appearance,expectedWeapon+".fbx");
-        Require(unit != null && unit.GetEquippedWeapon()!=null && unit.GetEquippedWeapon().Muzzle!=null,
-            model.name+" missing weapon or muzzle binding");
-        Require(AssetGuid(unit.GetTacticalPortrait())==FileGuid(role+"Portrait.png"),model.name+" wrong portrait");
+        Require(AssetGuid(unit.GetTacticalPortrait())==FileGuid(Folder+role+"Portrait.png"),model.name+" wrong portrait");
         var animator=model.GetComponentInChildren<Animator>(true);
         Require(animator && animator.runtimeAnimatorController,model.name+" missing Animator");
         var clips=animator.runtimeAnimatorController.animationClips;
         foreach (var take in new[] {"Idle","Walk","Aim","Fire","Reload","Hit","Fall","Mask"})
-            Require(clips.Any(c=> c.name.EndsWith(take,StringComparison.Ordinal) && AssetGuid(c)==FileGuid(role+".fbx")),
+            Require(clips.Any(c=> c.name.EndsWith(take,StringComparison.Ordinal) && AssetGuid(c)==FileGuid(Folder+role+".fbx")),
                 model.name+" missing "+take);
     }
 
@@ -90,14 +107,15 @@ public static class OsowiecFieldCastReview
     {
         foreach(var role in new[] {"Assault","Scout","Support"})
         {
-            var prefab=OsowiecFieldCast.Art<GameObject>("Game/"+role+"-Unit.prefab");
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(OsowiecProjectPaths.Prefab(role + "-Unit"));
+            Require(prefab, "missing unit prefab for " + role);
             var issued=prefab.GetComponent<Unit>().GetEquippedWeapon();
             string expected=IssuedModel(prefab.GetComponent<Unit>());
-            Require(issued && AssetGuid(issued.Config)==FileGuid("Game/"+expected+".asset") &&
+            Require(issued && AssetGuid(issued.Config)==FileGuid(Folder+"Game/"+expected+".asset") &&
                 issued.Config.isMarksmanRifle==(expected=="ObserverCarbine") && issued.AmmoInMag==5 &&
                 issued.MagazineSize==5 && issued.AmmoReserve==20,"incorrect issued ammunition on "+role);
         }
-        string weaponPath=Folder+"Game/RamCarbine.prefab";
+        string weaponPath=OsowiecProjectPaths.Prefab("RamCarbine");
         var preview=PrefabUtility.LoadPrefabContents(weaponPath);
         RangedWeaponConfig instant=null;
         try
@@ -128,7 +146,7 @@ public static class OsowiecFieldCastReview
             Require(fps.length>=.98f && new[]{"Presentation","Presentation/Support","Presentation/Brace","Presentation/Cassette"}
                 .All(path=>tracks.Any(t=>t.path==path && AnimationUtility.GetEditorCurve(fps,t).keys.Length>=5)),
                 "incomplete first person reload clip");
-            var model=OsowiecFieldCast.Art<GameObject>("Game/RamCarbine.prefab");
+            var model=AssetDatabase.LoadAssetAtPath<GameObject>(weaponPath);
             Require(model.GetComponentInChildren<LODGroup>(true)?.lodCount==2,"missing distance mesh on issued prop");
             Require(OsowiecFieldCast.Art<Texture2D>("Textures/WorkshopFinish_N.png").width>=1024,
                 "missing workshop tangent-space bake");
@@ -138,7 +156,7 @@ public static class OsowiecFieldCastReview
             PrefabUtility.UnloadPrefabContents(preview);
             if (instant) Object.DestroyImmediate(instant);
         }
-        Debug.Log("PASS Osowiec issued ammunition: each role 15+60, manual reload 30+45, full magazine rejects reload, repeated input and low reserve verified, FPS clip and depth LOD checked.");
+        Debug.Log("PASS Osowiec issued ammunition: each role 5+20, partial reload 2+20 to 5+17, full magazine rejects reload, repeated input and low reserve verified, FPS clip and depth LOD checked.");
     }
 
     static void Starts(Scene scene, ArmyDeploymentController deployment)
@@ -146,7 +164,7 @@ public static class OsowiecFieldCastReview
         var grid=ComponentIn<ChessGrid>(scene);
         var surface=ComponentIn<OsowiecOperation>(scene).GetComponent<NavMeshSurface>();
         Require(surface && surface.isActiveAndEnabled && surface.navMeshData &&
-            AssetDatabase.GetAssetPath(surface.navMeshData)=="Assets/Osowiec/OsowiecNavMesh.asset",
+            AssetDatabase.GetAssetPath(surface.navMeshData)==OsowiecProjectPaths.OperationNavMesh,
             "operation is not bound to the baked Osowiec navigation");
         var sectors=deployment.GetComponent<OsowiecDeploymentSectors>();
         Require(sectors && OsowiecDeploymentSectors.Cells.Length>=2,"missing separated deployment sectors");
@@ -200,14 +218,14 @@ public static class OsowiecFieldCastReview
             Require(offers.arraySize==roles.Length,"wrong number of roster entries");
             for(int i=0;i<roles.Length;i++)
             {
-                string path="Game/"+roles[i]+"-Unit.prefab";
+                string path=OsowiecProjectPaths.Prefab(roles[i] + "-Unit");
                 var offer=offers.GetArrayElementAtIndex(i);
                 var obj=offer.FindPropertyRelative("unitPrefab").objectReferenceValue as GameObject;
                 Require(obj && AssetGuid(obj)==FileGuid(path),"deployment uses wrong prefab "+roles[i]);
                 Require(offer.FindPropertyRelative("costPoints").intValue==costs[i],"incorrect price "+roles[i]);
                 Require(obj.GetComponent<Unit>().GetUnitDisplayName()==names[i],"incorrect displayed name "+roles[i]);
                 Actor(obj,roles[i]);
-                Actor(OsowiecFieldCast.Art<GameObject>(path.Replace(".prefab","-Enemy.prefab")),"Sentry");
+                Actor(AssetDatabase.LoadAssetAtPath<GameObject>(OsowiecFieldCast.EnemyPath(path)),"Sentry");
             }
             var actors=scene.GetRootGameObjects().SelectMany(go=>go.GetComponentsInChildren<Unit>(true))
                 .Where(u=>u.gameObject.activeInHierarchy && u.owner==Player.Player2).ToArray();
@@ -219,8 +237,9 @@ public static class OsowiecFieldCastReview
             foreach(string marker in new[]{"FieldRifleMuzzle","FieldRifleGrip","FieldFeed"})
                 Require(fps.model.GetComponentsInChildren<Transform>(true).Any(t=>t.name==marker),"FPS missing "+marker);
             Require(fps.hands.GetComponentsInChildren<Transform>(true).Any(t=>t.name=="FieldGloveL"),"missing wipe/reload hand");
-            string atlas=FileGuid("FieldPortraitAtlas.png");
-            Require(AssetGuid(ComponentIn<OsowiecPlanner>(scene).portraits)==atlas,"wrong map portraits");
+            string atlas=FileGuid(Folder+"FieldPortraitAtlas.png");
+            Require(AssetGuid(ComponentIn<OsowiecPlanner>(scene).portraits)==FileGuid("Assets/Resources/OsowiecJournal/portraits.png"),
+                "wrong journal portraits on the field map");
             var icons=new SerializedObject(ComponentIn<TacticalWorldIconsController>(scene));
             Require(AssetGuid(icons.FindProperty("fieldPortraitAtlas").objectReferenceValue)==atlas,"wrong world icons atlas");
             var card=data.FindProperty("cardPrefab").objectReferenceValue as DeploymentCardUI;

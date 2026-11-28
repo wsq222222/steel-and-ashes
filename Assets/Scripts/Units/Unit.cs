@@ -1,0 +1,1655 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.AI;
+using System.Collections;
+using System;
+
+/// <summary>Роль юнита для таргетинга ИИ (танк отдельно от пехоты в PvBot / Mission2).</summary>
+public enum UnitCombatRole
+{
+    Standard = 0,
+    Tank = 1
+}
+
+public class Unit : MonoBehaviour
+{
+    public static event Action<Unit, Vector2Int, Vector2Int> OnGridPositionChanged;
+    internal static uint RosterRevision { get; private set; }
+
+    public Transform cameraAttachPoint;
+    public Player owner;
+    internal OsowiecFieldTurn FieldTurn { get; } = new();
+
+    [Header("Класс и положение бойца")]
+    [Tooltip("Класс бойца. В операции Осовец от него зависят снаряжение и доступные действия.")]
+    public ChessUnitType chessType;
+    public Vector2Int currentGridPosition;      // Текущая логическая координата на доске (A1, C4, ...)
+    public bool isFirstMove = true;             // Флаг для пешек или других юнитов
+
+    [Header("AI / Mission targeting")]
+    [Tooltip("Tank: обычные враги PvBot не выбирают этот юнит как цель; только Guardian (ракетчик) может бить танк. Если на объекте есть Mission2.TankController, танк определяется и так.")]
+    [SerializeField] private UnitCombatRole combatRole = UnitCombatRole.Standard;
+
+    /// <summary>Танк для правил выбора цели ботом. Учитывает роль и наличие Mission2.TankController.</summary>
+    public bool IsTankUnit => combatRole == UnitCombatRole.Tank || GetComponent<Mission2.TankController>() != null;
+
+    [SerializeField] private int health = 100;
+    [SerializeField] private int maxHealth = 100;   // Максимальное здоровье (для хилла)
+    [SerializeField] private int damage = 20;
+
+    private CharacterController controller;
+    [SerializeField] private float moveSpeed = 5f;
+    public float MoveSpeed => moveSpeed; // Публичное свойство для доступа к скорости
+    [SerializeField] private float gravity = -9.81f;
+    [SerializeField] private float mouseSensitivity = 0.1f;
+    [SerializeField] private float maxVerticalAngle = 80f;
+    [SerializeField] private bool isKing = false;
+    
+    [Header("Animation")]
+    [SerializeField] private float baseMoveSpeed = 5f; // Базовая скорость, для которой анимация настроена
+    [SerializeField] private float minAnimationSpeed = 0.6f; // Минимальная скорость анимации
+    [SerializeField] private float maxAnimationSpeed = 1.2f; // Максимальная скорость анимации
+
+    [Header("Death")]
+    [Tooltip("Если в Animator есть такой Trigger (например Any State → Death), перед Destroy проигрывается клип смерти.")]
+    [SerializeField] private bool useDeathAnimation = true;
+    [SerializeField] private string deathAnimatorTrigger = "Die";
+    [Tooltip("Секунды до Destroy после смерти. Подгони под длину клипа Death в Animator (без loop на последнем кадре).")]
+    [SerializeField] private float deathDestroyDelaySeconds = 3f;
+    
+    [Header("Movement Steps (Dice)")]
+    [SerializeField] private int remainingSteps = 0;
+    [SerializeField] private float remainingMoveMeters = 0f;
+    [SerializeField] private bool constrainActionMovementToNavMesh = true;
+    [SerializeField] private float navMeshSampleRadius = 1.25f;
+    
+    public bool hubExploreNoCombat = false;
+
+    [Header("Grid Sync (Tactical Layer)")]
+    [Tooltip("Если включено, юнит будет принудительно привязываться к ChessGrid в Start(). Отключи в mission1, если юниты улетают/падают.")]
+    [SerializeField] private bool snapToGridOnStart = true;
+    [Tooltip("После центра клетки по XZ — луч вниз, Y ставится по коллайдеру пола/платформы (иначе GridToWorld всегда давал бы Y сетки).")]
+    [SerializeField] private bool snapRaycastDownForGroundY = true;
+    [Tooltip("На сколько метров выше max(Y сетки, текущая Y) начинается луч (чтобы не задеть свой коллайдер).")]
+    [SerializeField] private float snapGroundRaycastStartAbove = 5f;
+    [Tooltip("Максимальная длина луча вниз.")]
+    [SerializeField] private float snapGroundRaycastMaxDistance = 100f;
+    [SerializeField] private LayerMask snapGroundRaycastLayers = ~0;
+    [Tooltip("Небольшой зазор над поверхностью, чтобы не застревать в коллайдере.")]
+    [SerializeField] private float snapGroundYClearance = 0.08f;
+
+    // Был ли юнит хоть раз сдвинут за всю игру (для логики "первый шаг только вперед")
+    private bool hasMovedAtLeastOnce = false;
+    
+    [Header("QTE & Combat")]
+    private bool isBlocking = false; // Флаг блокирования (снижает входящий урон)
+    
+    [Header("Combat Sounds")]
+    [SerializeField] private AudioClip takeDamageSound; // Звук получения урона
+    [SerializeField] private AudioClip unitDeathSound; // Звук смерти юнита
+    [Tooltip("Зацикленный звук хода в экшене (игрок). Пусто — CombatSfxLibrary.unitMove (footstep). Танк использует TankController.")]
+    [SerializeField] private AudioClip unitMoveSound;
+    [Range(0f, 1f)] [SerializeField] private float unitMoveSoundVolume = 0.55f;
+    [Tooltip("Мин. скорость шага (м/с) для включения звука перемещения.")]
+    [SerializeField] private float unitMoveSoundMinSpeed = 0.15f;
+    private bool unitMoveSoundPlaying;
+    private bool externalMoveSoundActive;
+
+    [Header("Bishop — звуки (fallback, если пусто на Weapon)")]
+    [SerializeField] private AudioClip bishopFireSound;
+    [SerializeField] private AudioClip bishopReloadSound;
+    
+    
+    [Header("Audio Source (Optional)")]
+    [SerializeField] private AudioSource unitAudioSource; // Можно назначить вручную в Inspector, или создастся автоматически
+    
+    [Header("Tactical icon card (BF-style)")]
+    [SerializeField] private string unitDisplayNameOverride;
+    [SerializeField] private Sprite tacticalPortrait;
+
+    [Header("Equipped Weapon (Prefab)")]
+    [Tooltip("Если задано — юнит инстанцирует это оружие в Start() и будет стрелять им по ЛКМ.")]
+    [SerializeField] private Weapon startingWeaponPrefab;
+    [Tooltip("Куда прикреплять оружие (кость руки/пустышка). Если null — к корню юнита.")]
+    [SerializeField] private Transform weaponSocket;
+    [SerializeField] private Weapon equippedWeapon;
+
+    [Header("Attack Settings")]
+    [SerializeField] private string attackStateName = "attack"; // Имя состояния атаки в Animator
+    [SerializeField] private float attackDamageStartTime = 0.2f; // Нормализованное время начала нанесения урона (0-1)
+    [SerializeField] private float attackDamageEndTime = 0.8f; // Нормализованное время конца нанесения урона (0-1)
+
+    [Header("Ranged shoot animation (Bishop etc.)")]
+    [Tooltip("Состояние Animator, в котором дуло в позе выстрела (например BishopShoot).")]
+    [SerializeField] private string rangedShootStateName = "BishopShoot";
+    [Tooltip("Нормализованное время клипа выстрела (0–1), когда наносится hitscan и трассер с дула.")]
+    [SerializeField] [Range(0f, 1f)] private float rangedShootFireNormalizedTime = 0.72f;
+    [Tooltip("Макс. ожидание входа в состояние выстрела (сек).")]
+    [SerializeField] private float rangedShootAnimTimeoutSeconds = 1.5f;
+
+    [Header("Ability Effects")]
+    private bool hasReflectionActive = false;        // Слон - отражение урона
+    private bool hasDamageReduction = false;         // Ладья - снижение урона на 50%
+    private float damageMultiplier = 1.0f;          // Ферзь - увеличение урона (+20% = 1.2)
+    private int reflectionTurnsRemaining = 0;        // Сколько ходов осталось эффекту отражения
+    private int damageReductionTurnsRemaining = 0;   // Сколько ходов осталось эффекту снижения урона
+    private int damageBoostTurnsRemaining = 0;       // Сколько ходов осталось эффекту увеличения урона
+
+    private Vector3 playerVelocity;
+    private Vector2Int startGridPosition;
+    private Vector2Int lastCheckedGridPosition; // Последняя зафиксированная клетка (для списания шагов)
+    private Vector3 lastCheckedCellWorldPosition; // Центр последней зафиксированной клетки
+    private float xRotation = 0f;
+
+    private bool isGrounded;
+    private Vector2 moveInput;
+    private Vector2 lookInput;
+    private bool fireInput;
+    private bool isControlled = false;
+    private const float MinMoveBudgetEpsilon = 0.01f;
+
+    private bool isDeadOrDying;
+    private Animator animator;
+    private Coroutine rangedFireAnimRoutine;
+    private Coroutine postFireWeaponAudioRoutine;
+    private Unit pendingRangedAimUnit;
+
+    void Start()
+    {
+        controller = GetComponent<CharacterController>();
+        if (controller == null)
+        {
+            return;
+        }
+        if (snapToGridOnStart && ChessGrid.Instance != null)
+        {
+            SnapToGrid();
+        }
+        
+        // Инициализируем AudioSource для звуков юнита
+        InitializeAudioSources();
+
+        if (startingWeaponPrefab != null)
+        {
+            EquipWeaponPrefab(startingWeaponPrefab);
+        }
+
+        if (equippedWeapon != null)
+            equippedWeapon.SetOwnerUnit(this);
+    }
+    
+    void OnDestroy() => RosterRevision++;
+
+    void Awake()
+    {
+        RosterRevision++;
+        // Инициализируем AudioSource в Awake, чтобы он был готов до Start
+        InitializeAudioSources();
+        if (GetComponent<TacticalUnitPresentation>() == null)
+            gameObject.AddComponent<TacticalUnitPresentation>();
+
+        animator = GetComponent<Animator>();
+
+        // Auto-bind camera attach point if not set (prevents runtime exceptions).
+        if (cameraAttachPoint == null)
+        {
+            // Common child names used for FPS camera pivots.
+            Transform t = transform.Find("CameraAttachPoint");
+            if (t == null) t = transform.Find("cameraAttachPoint");
+            if (t == null) t = transform.Find("CameraPivot");
+            if (t == null) t = transform.Find("CameraPivotPoint");
+            cameraAttachPoint = t;
+        }
+    }
+
+    void OnEnable()
+    {
+        // Убеждаемся, что AudioSource инициализирован при активации объекта
+        // Это решает проблему, когда объект не был выбран в сцене перед запуском
+        InitializeAudioSources();
+    }
+    
+    /// <summary>
+    /// Инициализирует AudioSource для звуков юнита (можно назначить вручную или создастся автоматически)
+    /// </summary>
+    private void InitializeAudioSources()
+    {
+        // Если AudioSource не назначен в Inspector, пытаемся найти или создать
+        if (unitAudioSource == null)
+        {
+            // Сначала пытаемся найти существующий AudioSource на объекте
+            unitAudioSource = GetComponent<AudioSource>();
+            
+            // Если AudioSource не найден, создаем новый
+            if (unitAudioSource == null)
+            {
+                unitAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+        
+        // Всегда настраиваем AudioSource (даже если он был назначен вручную)
+        // Это гарантирует, что настройки правильные для всех экземпляров
+        if (unitAudioSource != null)
+        {
+            unitAudioSource.spatialBlend = 1f; // 3D звук
+            unitAudioSource.minDistance = 5f;
+            unitAudioSource.maxDistance = 15f;
+            unitAudioSource.priority = 100; // Средний приоритет
+            unitAudioSource.playOnAwake = false;
+            unitAudioSource.loop = false;
+            unitAudioSource.ignoreListenerPause = false; // Останавливается при паузе
+            unitAudioSource.enabled = true; // Убеждаемся, что включен
+            
+            // Убеждаемся, что GameObject активен
+            if (!unitAudioSource.gameObject.activeInHierarchy)
+            {
+                unitAudioSource.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        moveInput = context.ReadValue<Vector2>();
+    }
+
+    public void OnLook(InputAction.CallbackContext context)
+    {
+        lookInput = context.ReadValue<Vector2>();
+    }
+
+    public void OnFire(InputAction.CallbackContext context)
+    {
+        fireInput = context.performed && OsowiecFireTurn.Allows(this);
+    }
+
+    void Update()
+    {
+        if (isDeadOrDying) return;
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused()) return;
+        if (MissionSelectUI.Instance != null && MissionSelectUI.Instance.IsOpen) return;
+        if (controller == null) return;
+        isGrounded = controller.isGrounded;
+        if (isGrounded && playerVelocity.y < 0)
+        {
+            playerVelocity.y = -2f;
+        }
+
+        if (!isGrounded)
+        {
+            playerVelocity.y += gravity * Time.deltaTime;
+            controller.Move(playerVelocity * Time.deltaTime);
+        }
+
+        UpdateRangedWeaponState();
+
+        // Управление только для выбранного юнита
+        if (!isControlled) return;
+
+        if (!controller.enabled)
+        {
+            return;
+        }
+        // Обновляем позицию для тактической карты даже в экшен-режиме.
+        if (ChessGrid.Instance != null)
+        {
+            SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
+        }
+
+        Mission2.TankController tankDrive = GetComponent<Mission2.TankController>();
+        bool tankHandledMoveLook = tankDrive != null && tankDrive.enabled &&
+            tankDrive.ApplyPlayerTankFrame(this, controller, moveInput, lookInput, moveSpeed, mouseSensitivity);
+
+        bool movedThisFrame = false;
+        float moveSpeedMps = 0f;
+
+        if (!tankHandledMoveLook)
+        {
+            Vector3 rawMove = transform.right * moveInput.x + transform.forward * moveInput.y;
+            Vector3 moveDirection = rawMove.sqrMagnitude > 0f ? rawMove.normalized : Vector3.zero;
+            float requestedDistance = moveSpeed * moveInput.magnitude * Time.deltaTime;
+            if (OsowiecFieldKit.HoldPosition(this) || OsowiecFieldKit.BlocksLook(this)) requestedDistance = 0;
+            else if (OsowiecGroundEvents.InWire(transform.position)) requestedDistance *= .5f;
+            bool marching = OsowiecMarch.Free(this);
+            float allowedDistance = marching ? requestedDistance : Mathf.Min(requestedDistance, remainingMoveMeters);
+            Vector3 moveVector = moveDirection * allowedDistance;
+            moveVector = ConstrainMoveVectorToNavMesh(moveVector);
+            if (moveVector.sqrMagnitude > 0f)
+            {
+                Vector3 beforeMove = transform.position;
+                controller.Move(moveVector);
+                Vector3 displacement = transform.position - beforeMove;
+                displacement.y = 0f;
+                float actualDistance = Mathf.Min(allowedDistance, displacement.magnitude);
+                ConsumeMoveMeters(actualDistance);
+                movedThisFrame = actualDistance > .0001f;
+                moveSpeedMps = actualDistance / Mathf.Max(Time.deltaTime, 0.0001f);
+                if (ChessGrid.Instance != null)
+                {
+                    SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
+                }
+            }
+
+            float lookScale = gameObject.scene.name is "Osowiec" or "OsowiecHQ"
+                ? OsowiecFieldSettings.LookMultiplier : 1f;
+            if (OsowiecFieldKit.BlocksLook(this)) lookScale = 0;
+            // The observer stays planted while the optic follows the active field pointer.
+            Vector2 viewInput=lookInput;
+            if(OsowiecFieldKit.ScopeOpen && CameraManager.Instance.GetCurrentControlledUnit()==this)
+            {
+                if(Mouse.current!=null)viewInput=Mouse.current.delta.ReadValue();
+                var optical=CameraManager.Instance.GetActionCamera();
+                if(optical)lookScale*=Mathf.Tan(optical.fieldOfView*Mathf.Deg2Rad*.5f)/
+                    Mathf.Tan(OsowiecFieldSettings.FieldOfView*Mathf.Deg2Rad*.5f);
+            }
+            float mouseY = viewInput.y * mouseSensitivity * lookScale;
+            if((gameObject.scene.name is "Osowiec" or "OsowiecHQ") && OsowiecFieldSettings.InvertY)
+                mouseY = -mouseY;
+            xRotation -= mouseY;
+            xRotation = Mathf.Clamp(xRotation, -maxVerticalAngle, maxVerticalAngle);
+            if (cameraAttachPoint != null)
+            {
+                cameraAttachPoint.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+            }
+
+            float mouseX = viewInput.x * mouseSensitivity * lookScale;
+            transform.Rotate(Vector3.up * mouseX);
+        }
+
+        if (tankDrive == null || !tankDrive.enabled)
+            UpdateUnitMoveSound(movedThisFrame, moveSpeedMps);
+
+        HandleMovementSteps();
+        if (!isControlled) return;
+
+        // Ручная перезарядка (R) — только у управляемого юнита.
+        if (!hubExploreNoCombat && equippedWeapon != null && equippedWeapon.Config != null
+            && !OsowiecFieldKit.WheelOpen && OsowiecFieldKit.Held(this)==OsowiecKitItem.Rifle && !OsowiecFieldKit.ScopeOpen
+            && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        {
+            equippedWeapon.TryStartReload(playSoundAtStart: true);
+        }
+
+        if (animator != null)
+        {
+            float speed = moveInput.magnitude;
+            animator.SetFloat("Speed", speed);
+
+            bool combatStance = !hubExploreNoCombat && equippedWeapon != null && Mouse.current != null && Mouse.current.rightButton.isPressed;
+            TrySetAnimatorCombat(combatStance);
+
+            if (baseMoveSpeed > 0)
+            {
+                float animationSpeedMultiplier = moveSpeed / baseMoveSpeed;
+                animationSpeedMultiplier = Mathf.Clamp(animationSpeedMultiplier, minAnimationSpeed, maxAnimationSpeed);
+                animator.speed = animationSpeedMultiplier;
+            }
+        }
+
+        if (fireInput)
+        {
+            fireInput = false;
+            Attack();
+        }
+    }
+
+    /// <summary>
+    /// Выполняет атаку (публичный метод для использования ботом и игроком).
+    /// </summary>
+    /// <param name="rangedAimTarget">Для бота: цель; луч идёт от дула к цели. Игрок — null (луч с action-камеры).</param>
+    public void Attack(Unit rangedAimTarget = null)
+    {
+        if (hubExploreNoCombat || !OsowiecFireTurn.Allows(this)) return;
+        if (gameObject.scene.name == "Osowiec" && (OsowiecFieldKit.Busy(this) || (isControlled && OsowiecFieldKit.ScopeOpen))) return;
+        if (equippedWeapon != null && equippedWeapon.Config != null)
+        {
+            pendingRangedAimUnit = rangedAimTarget;
+            BeginRangedAttack();
+            return;
+        }
+
+        if (animator != null)
+        {
+            // Запускаем триггер анимации
+            animator.SetTrigger("Attack");
+            
+            // Очищаем список пораженных целей для новой атаки
+            WeaponCollider weaponCollider = GetComponentInChildren<WeaponCollider>();
+            if (weaponCollider != null)
+            {
+                weaponCollider.ClearHitTargets();
+            }
+        }
+    }
+
+    private void BeginRangedAttack()
+    {
+        if (equippedWeapon == null || equippedWeapon.Config == null) return;
+
+        // Пока идёт анимация выстрела или КД — не принимаем новый выстрел (анти-спам).
+        if (rangedFireAnimRoutine != null) return;
+        if (equippedWeapon.IsOnFireCooldown) return;
+
+        equippedWeapon.InitializeFromConfigIfNeeded();
+        equippedWeapon.TickReload();
+
+        if (!equippedWeapon.CanFire())
+        {
+            equippedWeapon.TryAutoReloadIfEmpty();
+            pendingRangedAimUnit = null;
+            return;
+        }
+
+        // Бот: выстрел и SFX сразу, анимация Shoot параллельно (без ожидания клипа).
+        if (pendingRangedAimUnit != null)
+        {
+            bool fired = ExecuteRangedFireOnce();
+            if ((fired || gameObject.scene.name != "Osowiec") && animator != null && HasAnimatorShootTrigger())
+                animator.SetTrigger("Shoot");
+            pendingRangedAimUnit = null;
+            return;
+        }
+
+        // Из прицела (ПКМ): выстрел сразу, анимация Shoot параллельно.
+        if (IsCombatAimStance())
+        {
+            bool fired = ExecuteRangedFireOnce();
+            if ((fired || gameObject.scene.name != "Osowiec") && animator != null && HasAnimatorShootTrigger())
+                animator.SetTrigger("Shoot");
+            pendingRangedAimUnit = null;
+            return;
+        }
+
+        // Из idle/run: сначала переход в Shoot, выстрел в конце клипа (трассер с дула в позе анимации).
+        if (animator != null && HasAnimatorShootTrigger())
+        {
+            if (rangedFireAnimRoutine != null)
+                StopCoroutine(rangedFireAnimRoutine);
+            rangedFireAnimRoutine = StartCoroutine(RangedFireAfterShootAnimation());
+            return;
+        }
+
+        ExecuteRangedFireOnce();
+        pendingRangedAimUnit = null;
+    }
+
+    private IEnumerator RangedFireAfterShootAnimation()
+    {
+        if (animator != null)
+            animator.SetTrigger("Shoot");
+
+        uint shotTurn = OsowiecFireTurn.Stamp(this);
+        float elapsed = 0f;
+        bool fired = false;
+
+        while (elapsed < rangedShootAnimTimeoutSeconds)
+        {
+            if (!OsowiecFireTurn.StillActive(this, shotTurn))
+            {
+                pendingRangedAimUnit = null;
+                rangedFireAnimRoutine = null;
+                yield break;
+            }
+            if (isDeadOrDying || equippedWeapon == null)
+                break;
+
+            equippedWeapon.TickReload();
+            if (!equippedWeapon.CanFire())
+                break;
+
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+            if (animator.IsInTransition(0))
+            {
+                AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(0);
+                if (next.IsName(rangedShootStateName) && next.normalizedTime >= rangedShootFireNormalizedTime)
+                {
+                    fired = ExecuteRangedFireOnce();
+                    break;
+                }
+            }
+            else if (state.IsName(rangedShootStateName) && state.normalizedTime >= rangedShootFireNormalizedTime)
+            {
+                fired = ExecuteRangedFireOnce();
+                break;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!fired && OsowiecFireTurn.StillActive(this, shotTurn) && equippedWeapon != null && equippedWeapon.CanFire())
+            ExecuteRangedFireOnce();
+
+        pendingRangedAimUnit = null;
+        rangedFireAnimRoutine = null;
+    }
+
+    private bool ExecuteRangedFireOnce()
+    {
+        if (equippedWeapon == null) return false;
+        GetRangedFireRay(out Vector3 origin, out Vector3 direction);
+        return equippedWeapon.TryFire(this, origin, direction);
+    }
+
+    private void GetRangedFireRay(out Vector3 origin, out Vector3 direction)
+    {
+        if (pendingRangedAimUnit != null && pendingRangedAimUnit.GetHealth() > 0)
+        {
+            Transform muzzle = equippedWeapon.Muzzle;
+            origin = muzzle != null
+                ? muzzle.position
+                : transform.position + Vector3.up * 1.2f;
+            Vector3 aimPoint = pendingRangedAimUnit.transform.position + Vector3.up * 1f;
+            direction = aimPoint - origin;
+            if (direction.sqrMagnitude < 0.0001f)
+                direction = transform.forward;
+            else
+                direction.Normalize();
+            return;
+        }
+
+        Camera actionCam = CameraManager.Instance != null ? CameraManager.Instance.GetActionCamera() : null;
+        if (actionCam != null)
+        {
+            if (gameObject.scene.name == "Osowiec")
+            {
+                Ray aim = actionCam.ViewportPointToRay(new Vector3(.5f,.5f,0));
+                origin = actionCam.transform.position;
+                direction = aim.direction;
+                return;
+            }
+            origin = actionCam.transform.position;
+            direction = actionCam.transform.forward;
+            return;
+        }
+
+        origin = equippedWeapon.Muzzle != null
+            ? equippedWeapon.Muzzle.position
+            : transform.position + Vector3.up * 1.2f;
+        direction = transform.forward;
+    }
+
+    private bool IsCombatAimStance()
+    {
+        if (hubExploreNoCombat || equippedWeapon == null) return false;
+        return Mouse.current != null && Mouse.current.rightButton.isPressed;
+    }
+
+    private bool HasAnimatorShootTrigger()
+    {
+        if (animator == null) return false;
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Shoot")
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Вызывается из Animation Event на клипе BishopShoot (опционально).</summary>
+    public void AnimEvent_RangedFire()
+    {
+        if (equippedWeapon == null || !equippedWeapon.CanFire()) return;
+        ExecuteRangedFireOnce();
+        pendingRangedAimUnit = null;
+    }
+
+    private void UpdateRangedWeaponState()
+    {
+        if (hubExploreNoCombat || equippedWeapon == null || equippedWeapon.Config == null)
+        {
+            TrySetAnimatorReload(false);
+            return;
+        }
+
+        equippedWeapon.TickReload();
+        TrySetAnimatorReload(equippedWeapon.IsReloading);
+    }
+
+    public void EquipWeapon(Weapon weaponInstance)
+    {
+        if (equippedWeapon != null)
+        {
+            Destroy(equippedWeapon.gameObject);
+            equippedWeapon = null;
+        }
+
+        equippedWeapon = weaponInstance;
+        if (equippedWeapon == null) return;
+
+        equippedWeapon.SetOwnerUnit(this);
+
+        Transform parent = weaponSocket != null ? weaponSocket : transform;
+        equippedWeapon.transform.SetParent(parent, worldPositionStays: false);
+        equippedWeapon.transform.localPosition = Vector3.zero;
+        equippedWeapon.transform.localRotation = Quaternion.identity;
+        equippedWeapon.InitializeFromConfigIfNeeded();
+    }
+
+    public void EquipWeaponPrefab(Weapon weaponPrefab)
+    {
+        if (weaponPrefab == null) return;
+        Weapon instance = Instantiate(weaponPrefab);
+        EquipWeapon(instance);
+    }
+
+    public Weapon GetEquippedWeapon()
+    {
+        return equippedWeapon;
+    }
+
+    public bool TryGetRangedAttackRangeMeters(out float rangeMeters)
+    {
+        rangeMeters = 0f;
+        if (equippedWeapon == null || equippedWeapon.Config == null)
+            return false;
+
+        rangeMeters = Mathf.Max(0.1f, equippedWeapon.Config.maxHitRangeMeters);
+        return true;
+    }
+
+    /// <summary>
+    /// Проверяет, атакует ли юнит в данный момент, проверяя состояние аниматора
+    /// </summary>
+    public bool IsAttacking()
+    {
+        if (animator == null) return false;
+        
+        // Проверяем, находится ли аниматор в состоянии атаки
+        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+        
+        // Проверяем по имени состояния
+        if (stateInfo.IsName(attackStateName))
+        {
+            // Проверяем нормализованное время анимации
+            // Урон наносится только в определенной части анимации (например, от 0.2 до 0.8)
+            float normalizedTime = stateInfo.normalizedTime % 1.0f;
+            bool inDamageWindow = normalizedTime >= attackDamageStartTime && normalizedTime <= attackDamageEndTime;
+            
+            return inDamageWindow;
+        }
+        
+        return false;
+    }
+
+    /// <summary>
+    /// Наносит урон юниту. Учитывает блокирование, снижение урона и отражение.
+    /// </summary>
+    /// <param name="amount">Количество урона</param>
+    /// <param name="attacker">Юнит, который наносит урон (для отражения)</param>
+    public void TakeDamage(int amount, Unit attacker = null) => TakeDamage(amount, attacker, false);
+
+    internal void TakeDamage(int amount, Unit attacker, bool decisiveHit, string cause = null)
+    {
+        if (isDeadOrDying) return;
+
+        int originalAmount = amount;
+        
+        // Если юнит блокирует, урон полностью блокируется (0 урона)
+        if (isBlocking)
+        {
+            amount = 0; // Полная блокировка урона
+        }
+        
+        // ЛАДЬЯ: Снижение урона на 50%
+        if (hasDamageReduction)
+        {
+            amount = Mathf.RoundToInt(amount * 0.5f);
+        }
+        
+        // Наносим урон
+        if (decisiveHit) amount = health;
+        health -= amount;
+        
+        // Воспроизводим звук получения урона (только если урон был нанесен)
+        if (amount > 0)
+        {
+            PlayTakeDamageSound();
+        }
+        
+        // СЛОН: Отражение урона обратно атакующему (если есть атакующий и урон был нанесен)
+        if (hasReflectionActive && attacker != null && amount > 0)
+        {
+            // Отправляем урон обратно атакующему (отражаем уже уменьшенный урон)
+            attacker.TakeDamage(amount, this);
+        }
+        
+        if (health <= 0)
+        {
+            OsowiecOperation.Instance?.ReportLoss(this, attacker, cause);
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        if (isDeadOrDying) return;
+        isDeadOrDying = true;
+        health = 0;
+
+        PlayDeathSound();
+
+        if (isControlled && CameraManager.Instance != null)
+        {
+            if (!OsowiecOperation.Instance || !OsowiecOperation.Instance.ReviewingLossOf(this))
+                CameraManager.Instance.ForceSwitchToTacticalMode();
+            SetControlled(false);
+        }
+
+        if (isKing && GameManager.Instance != null)
+            GameManager.Instance.EndGame(owner);
+
+        bool playDeathAnim = useDeathAnimation && TryPlayDeathAnimation();
+        DisableGameplayForDeath();
+        if (playDeathAnim && TryGetComponent<OsowiecHitBody>(out var fieldBody)) fieldBody.SettleFall();
+
+        if (playDeathAnim)
+        {
+            StartCoroutine(DestroyAfterDeathPresentation());
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void DisableGameplayForDeath()
+    {
+        if (rangedFireAnimRoutine != null)
+        {
+            StopCoroutine(rangedFireAnimRoutine);
+            rangedFireAnimRoutine = null;
+        }
+        if (postFireWeaponAudioRoutine != null)
+        {
+            StopCoroutine(postFireWeaponAudioRoutine);
+            postFireWeaponAudioRoutine = null;
+        }
+        pendingRangedAimUnit = null;
+        StopUnitMoveSound();
+
+        if (controller != null)
+            controller.enabled = false;
+
+        NavMeshAgent agent = GetComponent<NavMeshAgent>();
+        if (agent != null)
+            agent.enabled = false;
+
+        Mission2.TankController tankCtrl = GetComponent<Mission2.TankController>();
+        if (tankCtrl != null)
+            tankCtrl.enabled = false;
+
+        if (isControlled)
+            SetControlled(false);
+
+        // Не отключаем сам MonoBehaviour Unit — иначе корутина Destroy не выполнится.
+    }
+
+    private bool TryPlayDeathAnimation()
+    {
+        if (animator == null)
+            animator = GetComponent<Animator>();
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+        if (animator == null)
+            return false;
+
+        animator.speed = 1f;
+        animator.enabled = true;
+        animator.updateMode = AnimatorUpdateMode.Normal;
+
+        if (AnimatorHasTriggerParameter(animator, deathAnimatorTrigger))
+        {
+            animator.ResetTrigger(deathAnimatorTrigger);
+            animator.SetTrigger(deathAnimatorTrigger);
+            return true;
+        }
+
+        string deathState = GetDefaultDeathAnimatorStateName();
+        if (!string.IsNullOrEmpty(deathState))
+        {
+            int hash = Animator.StringToHash(deathState);
+            if (animator.HasState(0, hash))
+            {
+                animator.Play(hash, 0, 0f);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string GetDefaultDeathAnimatorStateName()
+    {
+        switch (chessType)
+        {
+            case ChessUnitType.Guardian: return "GuardianDeath";
+            case ChessUnitType.Bishop: return "BishopDeath";
+            default: return "BishopDeath";
+        }
+    }
+
+    private static bool AnimatorHasTriggerParameter(Animator anim, string triggerName)
+    {
+        if (anim == null || string.IsNullOrEmpty(triggerName)) return false;
+        foreach (AnimatorControllerParameter p in anim.parameters)
+        {
+            if (p.type == AnimatorControllerParameterType.Trigger && p.name == triggerName)
+                return true;
+        }
+        return false;
+    }
+
+    private IEnumerator DestroyAfterDeathPresentation()
+    {
+        float delay = Mathf.Max(0.05f, deathDestroyDelaySeconds);
+        yield return new WaitForSeconds(delay);
+        Destroy(gameObject);
+    }
+    public void SnapToGrid()
+    {
+        if (ChessGrid.Instance == null) return;
+        SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
+        Vector3 baseSnap = ChessGrid.Instance.GridToWorldPosition(currentGridPosition.x, currentGridPosition.y);
+        Vector3 snapPosition = ApplyGroundYFromRaycast(baseSnap);
+
+        if (controller != null)
+        {
+            controller.enabled = false;
+            transform.position = snapPosition;
+            controller.enabled = true;
+        }
+        else
+        {
+            transform.position = snapPosition;
+        }
+    }
+
+    private Vector3 ApplyGroundYFromRaycast(Vector3 baseSnapXZ)
+    {
+        if (!snapRaycastDownForGroundY)
+            return baseSnapXZ;
+
+        float startY = Mathf.Max(baseSnapXZ.y, transform.position.y) + Mathf.Max(0.1f, snapGroundRaycastStartAbove);
+        Vector3 rayOrigin = new Vector3(baseSnapXZ.x, startY, baseSnapXZ.z);
+        if (gameObject.scene.name == "Osowiec")
+        {
+            // Placement runs on a live capsule: the first downward hit can be this unit's helmet.
+            float nearest = float.PositiveInfinity;
+            float ground = baseSnapXZ.y;
+            foreach (var candidate in Physics.RaycastAll(rayOrigin, Vector3.down, snapGroundRaycastMaxDistance,
+                         snapGroundRaycastLayers, QueryTriggerInteraction.Ignore))
+            {
+                if (candidate.distance >= nearest || candidate.collider.GetComponentInParent<Unit>() != null) continue;
+                nearest = candidate.distance;
+                ground = candidate.point.y;
+            }
+            return new Vector3(baseSnapXZ.x, ground + Mathf.Max(0f, snapGroundYClearance), baseSnapXZ.z);
+        }
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, snapGroundRaycastMaxDistance, snapGroundRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            float y = hit.point.y + Mathf.Max(0f, snapGroundYClearance);
+            return new Vector3(baseSnapXZ.x, y, baseSnapXZ.z);
+        }
+
+        return new Vector3(baseSnapXZ.x, transform.position.y, baseSnapXZ.z);
+    }
+
+    public void SetRemainingSteps(int steps)
+    {
+        remainingSteps = Mathf.Max(0, steps);
+        float fallbackMetersPerStep = ChessGrid.Instance != null ? ChessGrid.Instance.cellSize : 1f;
+        float metersPerStep = GameManager.Instance != null ? GameManager.Instance.GetMetersPerDicePoint() : fallbackMetersPerStep;
+        remainingMoveMeters = remainingSteps * Mathf.Max(0f, metersPerStep);
+        
+        if (ChessGrid.Instance != null)
+        {
+            lastCheckedGridPosition = ChessGrid.Instance.WorldToGridCoords(transform.position);
+            lastCheckedCellWorldPosition = ChessGrid.Instance.GridToWorldPosition(lastCheckedGridPosition.x, lastCheckedGridPosition.y);
+        }
+    }
+    
+    public int GetRemainingSteps() => remainingSteps;
+    
+    public void SetRemainingMoveMeters(float meters)
+    {
+        remainingMoveMeters = Mathf.Max(0f, meters);
+        float fallbackMetersPerStep = ChessGrid.Instance != null ? ChessGrid.Instance.cellSize : 1f;
+        float metersPerStep = GameManager.Instance != null ? GameManager.Instance.GetMetersPerDicePoint() : fallbackMetersPerStep;
+        if (metersPerStep > 0f)
+        {
+            remainingSteps = Mathf.CeilToInt(remainingMoveMeters / metersPerStep);
+        }
+        else
+        {
+            remainingSteps = 0;
+        }
+    }
+    
+    public float GetRemainingMoveMeters() => remainingMoveMeters;
+    
+    public void ConsumeMoveMeters(float meters)
+    {
+        if (meters <= 0f) return;
+        if (OsowiecPlanner.Instance && FieldTurn.Activated)
+        {
+            FieldTurn.Walk(meters);
+            if (owner == Player.Player1 && isControlled && OsowiecMarch.Free(this)) return;
+        }
+        remainingMoveMeters = Mathf.Max(0f, remainingMoveMeters - meters);
+
+        float fallbackMetersPerStep = ChessGrid.Instance != null ? ChessGrid.Instance.cellSize : 1f;
+        float metersPerStep = GameManager.Instance != null ? GameManager.Instance.GetMetersPerDicePoint() : fallbackMetersPerStep;
+        if (metersPerStep > 0f)
+        {
+            remainingSteps = Mathf.CeilToInt(remainingMoveMeters / metersPerStep);
+        }
+        else
+        {
+            remainingSteps = 0;
+        }
+    }
+
+    public bool HasMovedAtLeastOnce() => hasMovedAtLeastOnce;
+
+    public bool HasMovedThisTurn()
+    {
+        if (!isControlled) return false;
+        if (ChessGrid.Instance == null) return false;
+        Vector2Int pos = ChessGrid.Instance.WorldToGridCoords(transform.position);
+        return pos != startGridPosition;
+    }
+    
+    private void HandleMovementSteps()
+    {
+        if (ChessGrid.Instance != null)
+        {
+            SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
+            if (currentGridPosition != lastCheckedGridPosition)
+            {
+                hasMovedAtLeastOnce = true;
+                lastCheckedGridPosition = currentGridPosition;
+                lastCheckedCellWorldPosition = ChessGrid.Instance.GridToWorldPosition(currentGridPosition.x, currentGridPosition.y);
+                if (GridHighlighter.Instance != null)
+                {
+                    GridHighlighter.Instance.ShowAllowedMoves(this);
+                }
+            }
+        }
+
+        TryEndActionTurnWhenMoveBudgetEmpty();
+    }
+
+    /// <summary>Срабатывает и без ChessGrid (уровень только по NavMesh).</summary>
+    private void TryEndActionTurnWhenMoveBudgetEmpty()
+    {
+        if (remainingMoveMeters > MinMoveBudgetEpsilon) return;
+        if (OsowiecFieldKit.Instance != null) return;
+        if (CameraManager.Instance == null || !CameraManager.Instance.IsActionMode()) return;
+        if (CameraManager.Instance.GetCurrentControlledUnit() != this) return;
+
+        remainingMoveMeters = 0f;
+        remainingSteps = 0;
+        CameraManager.Instance.SwitchToTacticalMode();
+    }
+    
+    private void SnapToCellWorldPosition(Vector3 worldPos)
+    {
+        if (controller != null)
+        {
+            controller.enabled = false;
+            transform.position = worldPos;
+            controller.enabled = true;
+        }
+        else
+        {
+            transform.position = worldPos;
+        }
+    }
+
+    public void ResetAnimation()
+    {
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", 0f);
+            animator.speed = 1.0f; // Сбрасываем скорость анимации
+            TrySetAnimatorCombat(false);
+            animator.Update(0f);
+        }
+        // Очищаем список пораженных целей при сбросе анимации
+        WeaponCollider weaponCollider = GetComponentInChildren<WeaponCollider>();
+        if (weaponCollider != null)
+        {
+            weaponCollider.ClearHitTargets();
+        }
+    }
+
+    /// <summary>
+    /// Выставляет bool Combat, если он есть в Animator Controller (например BishopController).
+    /// Стойка прицела: зажата ПКМ при экипированном оружии.
+    /// </summary>
+    private void TrySetAnimatorCombat(bool combatStance)
+    {
+        if (animator == null) return;
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.type == AnimatorControllerParameterType.Bool && p.name == "Combat")
+            {
+                animator.SetBool("Combat", combatStance);
+                return;
+            }
+        }
+    }
+
+    /// <summary>Bool Reload в Animator (BishopReload и др.), если параметр есть в контроллере.</summary>
+    private void TrySetAnimatorReload(bool reloading)
+    {
+        if (animator == null) return;
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.type == AnimatorControllerParameterType.Bool && p.name == "Reload")
+            {
+                animator.SetBool("Reload", reloading);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Внешний контроль анимации движения (когда юнит двигается корутинами бота, не через input).
+    /// </summary>
+    /// <param name="speedMps">Скорость для звука шага; &lt;= 0 — взять moveSpeed юнита.</param>
+    public void SetExternalMoveAnimation(bool moving, float speedMps = 0f)
+    {
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", moving ? 1f : 0f);
+
+            if (moving && baseMoveSpeed > 0f)
+            {
+                float animationSpeedMultiplier = moveSpeed / baseMoveSpeed;
+                animationSpeedMultiplier = Mathf.Clamp(animationSpeedMultiplier, minAnimationSpeed, maxAnimationSpeed);
+                animator.speed = animationSpeedMultiplier;
+            }
+            else if (!moving)
+            {
+                animator.speed = 1.0f;
+            }
+        }
+
+        externalMoveSoundActive = moving;
+        float audioSpeed = moving ? (speedMps > 0f ? speedMps : moveSpeed) : 0f;
+        UpdateUnitMoveSound(moving, audioSpeed);
+    }
+
+    public void SetControlled(bool controlled)
+    {
+        isControlled = controlled;
+        if (controlled)
+        {
+            fireInput = false;
+            // Начало хода: Запоминаем стартовую клетку
+            if (ChessGrid.Instance != null)
+            {
+                startGridPosition = ChessGrid.Instance.WorldToGridCoords(transform.position);
+                lastCheckedGridPosition = startGridPosition; // Инициализируем отслеживание переходов
+                lastCheckedCellWorldPosition = ChessGrid.Instance.GridToWorldPosition(startGridPosition.x, startGridPosition.y);
+            }
+        }
+        else
+        {
+            Mission2.TankController tankCtrl = GetComponent<Mission2.TankController>();
+            if (tankCtrl != null)
+                tankCtrl.NotifyTankControlEnded();
+
+            StopUnitMoveSound();
+
+            // Сбрасываем ввод, чтобы не "залипала" анимация бега после завершения хода
+            moveInput = Vector2.zero;
+            lookInput = Vector2.zero;
+            fireInput = false;
+
+            // Конец хода: Просто убеждаемся, что анимация остановлена
+            ResetAnimation();
+            // isAttacking уже сброшен в ResetAnimation()
+            
+            // Если юнит завершает ход, и он стоит не на стартовой клетке
+            if (ChessGrid.Instance != null)
+            {
+                SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
+                // Если ход был легален (isMoveLegal == true в последнем Update), 
+                // можно пометить isFirstMove = false для пешек.
+                if (chessType == ChessUnitType.Pawn && startGridPosition != currentGridPosition)
+                {
+                    // Для пешки, если она сдвинулась, это был первый ход
+                    isFirstMove = false;
+                }
+            }
+        }
+    }
+
+    private void SetCurrentGridPosition(Vector2Int newPosition)
+    {
+        Vector2Int oldPosition = currentGridPosition;
+        currentGridPosition = newPosition;
+        if (oldPosition != newPosition)
+        {
+            OnGridPositionChanged?.Invoke(this, oldPosition, newPosition);
+        }
+    }
+
+
+    public int GetHealth()
+    {
+        return health;
+    }
+    
+    /// <summary>
+    /// Возвращает максимальное здоровье юнита (для хилла)
+    /// </summary>
+    public int GetMaxHealth()
+    {
+        return maxHealth;
+    }
+
+    /// <summary>Пустая строка = использовать дефолт по типу фигуры на UI.</summary>
+    public string GetUnitDisplayName()
+    {
+        return unitDisplayNameOverride ?? string.Empty;
+    }
+
+    public Sprite GetTacticalPortrait()
+    {
+        return tacticalPortrait;
+    }
+    
+    public float GetRuleIntegrityPoints()
+    {
+        // Backwards-compat: заменено на шаги. План: удалить вызовы с UI/бота.
+        return remainingMoveMeters;
+    }
+    public int Damage { get { return damage; } }
+    
+    /// <summary>
+    /// Проверяет, контролируется ли юнит в данный момент
+    /// </summary>
+    public bool IsControlled()
+    {
+        return isControlled;
+    }
+    
+    // ========== СПОСОБНОСТИ: Методы для работы с эффектами ==========
+    
+    /// <summary>
+    /// Исцеляет юнита на указанное количество HP
+    /// </summary>
+    /// <param name="amount">Количество HP для восстановления</param>
+    public void Heal(int amount)
+    {
+        if (isDeadOrDying) return;
+        health = Mathf.Min(health + amount, maxHealth);
+    }
+    
+    /// <summary>
+    /// Устанавливает эффект отражения урона (Слон)
+    /// </summary>
+    /// <param name="active">Активен ли эффект</param>
+    /// <param name="turns">На сколько ходов действует эффект</param>
+    public void SetReflectionActive(bool active, int turns)
+    {
+        hasReflectionActive = active;
+        reflectionTurnsRemaining = turns;
+    }
+    
+    /// <summary>
+    /// Устанавливает эффект снижения урона (Ладья)
+    /// </summary>
+    /// <param name="active">Активен ли эффект</param>
+    /// <param name="turns">На сколько ходов действует эффект</param>
+    public void SetDamageReduction(bool active, int turns)
+    {
+        hasDamageReduction = active;
+        damageReductionTurnsRemaining = turns;
+    }
+    
+    /// <summary>
+    /// Устанавливает множитель урона (Ферзь)
+    /// </summary>
+    /// <param name="multiplier">Множитель урона (1.0 = обычный, 1.2 = +20%)</param>
+    /// <param name="turns">На сколько ходов действует эффект</param>
+    public void SetDamageMultiplier(float multiplier, int turns)
+    {
+        damageMultiplier = multiplier;
+        damageBoostTurnsRemaining = turns;
+    }
+    
+    /// <summary>
+    /// Возвращает текущий множитель урона (для WeaponCollider)
+    /// </summary>
+    public float GetDamageMultiplier()
+    {
+        return damageMultiplier;
+    }
+    
+    /// <summary>
+    /// Обновляет эффекты способностей при смене хода (вызывается из GameManager)
+    /// Эффекты отключаются в конце хода, в котором они должны действовать.
+    /// </summary>
+    public void UpdateAbilityEffects()
+    {
+        // Обновляем отражение (Слон) - эффект действует весь ход врага
+        if (reflectionTurnsRemaining > 0)
+        {
+            reflectionTurnsRemaining--;
+            if (reflectionTurnsRemaining <= 0)
+            {
+                hasReflectionActive = false;
+            }
+        }
+        
+        // Обновляем снижение урона (Ладья) - эффект действует весь ход врага
+        if (damageReductionTurnsRemaining > 0)
+        {
+            damageReductionTurnsRemaining--;
+            if (damageReductionTurnsRemaining <= 0)
+            {
+                hasDamageReduction = false;
+            }
+        }
+        
+        // Обновляем увеличение урона (Ферзь) - эффект действует в текущем ходу
+        if (damageBoostTurnsRemaining > 0)
+        {
+            damageBoostTurnsRemaining--;
+            if (damageBoostTurnsRemaining <= 0)
+            {
+                damageMultiplier = 1.0f;
+            }
+        }
+    }
+    
+    // ========== QTE СИСТЕМА: Методы для работы с блокированием ==========
+    
+    /// <summary>
+    /// Устанавливает состояние блокирования юнита.
+    /// Используется в QTE системе при успешном блоке.
+    /// </summary>
+    /// <param name="blocking">true - юнит блокирует, false - не блокирует</param>
+    public void SetBlocking(bool blocking)
+    {
+        isBlocking = blocking;
+        // Здесь можно добавить визуальный эффект блокирования (например, свечение щита)
+    }
+    
+    /// <summary>
+    /// Проверяет, блокирует ли юнит в данный момент.
+    /// </summary>
+    /// <returns>true если юнит блокирует, false если нет</returns>
+    public bool IsBlocking() => isBlocking;
+    
+    // ========== БОЕВЫЕ ЗВУКИ ==========
+    
+    /// <summary>
+    /// Получает AudioSource для боевых звуков (для использования в WeaponCollider)
+    /// </summary>
+    public AudioSource GetCombatAudioSource()
+    {
+        if (unitAudioSource == null)
+        {
+            InitializeAudioSources();
+        }
+        return unitAudioSource;
+    }
+
+    public AudioClip GetBishopFireSoundFallback() => bishopFireSound;
+    public AudioClip GetBishopReloadSoundFallback() => bishopReloadSound;
+
+    public static void StopAllUnitMoveSounds()
+    {
+        Unit[] units = UnityEngine.Object.FindObjectsByType<Unit>(FindObjectsInactive.Exclude);
+        foreach (Unit u in units)
+        {
+            if (u != null)
+                u.StopUnitMoveSound();
+        }
+    }
+
+    private AudioClip ResolveUnitMoveClip()
+    {
+        if (unitMoveSound != null) return unitMoveSound;
+        CombatSfxLibrary lib = CombatSfxLibrary.Instance;
+        return lib != null ? lib.GetUnitMove() : null;
+    }
+
+    private bool CanPlayUnitMoveAudio()
+    {
+        if (IsTankUnit || hubExploreNoCombat) return false;
+        if (OsowiecAtmosphere.HasSurfaceFootsteps) return false;
+        if (GetComponent<Mission2.TankController>() != null) return false;
+        if (GameManager.Instance == null) return false;
+        if (GameManager.Instance.IsPaused()) return false;
+        if (GameManager.Instance.currentPlayer != owner) return false;
+
+        if (externalMoveSoundActive && GameManager.Instance.IsBotTurn())
+            return true;
+
+        if (CameraManager.Instance == null) return false;
+        if (!isControlled || !IsControlled()) return false;
+        if (CameraManager.Instance.GetCurrentControlledUnit() != this) return false;
+        if (!CameraManager.Instance.IsActionMode()) return false;
+        return true;
+    }
+
+    public void StopUnitMoveSound()
+    {
+        AudioSource src = GetCombatAudioSource();
+        AudioClip moveClip = ResolveUnitMoveClip();
+        if (src != null && unitMoveSoundPlaying)
+        {
+            if (moveClip != null && src.clip == moveClip && src.isPlaying)
+                src.Stop();
+            src.loop = false;
+        }
+        unitMoveSoundPlaying = false;
+    }
+
+    private void UpdateUnitMoveSound(bool moving, float speedMps)
+    {
+        if (!CanPlayUnitMoveAudio())
+        {
+            StopUnitMoveSound();
+            return;
+        }
+
+        AudioClip moveClip = ResolveUnitMoveClip();
+        AudioSource src = GetCombatAudioSource();
+        if (src == null || moveClip == null)
+        {
+            unitMoveSoundPlaying = false;
+            return;
+        }
+
+        bool shouldPlay = moving && speedMps >= unitMoveSoundMinSpeed;
+        if (shouldPlay && !unitMoveSoundPlaying)
+        {
+            src.clip = moveClip;
+            src.loop = true;
+            float vol = (AudioManager.Instance != null ? AudioManager.Instance.SFXVolume : 1f) * unitMoveSoundVolume;
+            src.volume = vol;
+            if (!src.isPlaying || src.clip != moveClip)
+                src.Play();
+            unitMoveSoundPlaying = true;
+        }
+        else if (!shouldPlay && unitMoveSoundPlaying)
+        {
+            if (src.clip == moveClip && src.isPlaying)
+                src.Stop();
+            src.loop = false;
+            unitMoveSoundPlaying = false;
+        }
+    }
+
+    private void OnDisable()
+    {
+        StopUnitMoveSound();
+    }
+
+    /// <summary>После выстрела: пауза → звук перезарядки → автоперезарядка при пустом магазине.</summary>
+    public void SchedulePostFireWeaponAudio(Weapon weapon, float reloadSoundDelay)
+    {
+        if (weapon == null) return;
+        if (postFireWeaponAudioRoutine != null)
+            StopCoroutine(postFireWeaponAudioRoutine);
+        postFireWeaponAudioRoutine = StartCoroutine(PostFireWeaponAudioRoutine(weapon, reloadSoundDelay));
+    }
+
+    private IEnumerator PostFireWeaponAudioRoutine(Weapon weapon, float reloadSoundDelay)
+    {
+        uint shotTurn = OsowiecFireTurn.Stamp(this);
+        yield return new WaitForSeconds(Mathf.Max(0.05f, reloadSoundDelay));
+        if (weapon == null || isDeadOrDying || !OsowiecFireTurn.StillActive(this, shotTurn))
+        {
+            postFireWeaponAudioRoutine = null;
+            yield break;
+        }
+
+        weapon.PlayPostFireReloadSound();
+        weapon.TryStartReloadAfterPostFireAudio();
+        postFireWeaponAudioRoutine = null;
+    }
+    
+    /// <summary>
+    /// Воспроизводит звук получения урона с небольшой задержкой после атаки
+    /// </summary>
+    private void PlayTakeDamageSound()
+    {
+        if (takeDamageSound != null)
+        {
+            // Инициализируем AudioSource, если его нет
+            if (unitAudioSource == null)
+            {
+                InitializeAudioSources();
+            }
+            
+            if (unitAudioSource != null)
+            {
+                // Добавляем небольшую задержку, чтобы звук атаки успел проиграться
+                StartCoroutine(PlayTakeDamageSoundDelayed(0.1f));
+            }
+        }
+    }
+    
+    private System.Collections.IEnumerator PlayTakeDamageSoundDelayed(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (unitAudioSource != null && takeDamageSound != null)
+        {
+            float volume = AudioManager.Instance != null ? AudioManager.Instance.SFXVolume : 1f;
+            unitAudioSource.PlayOneShot(takeDamageSound, volume);
+        }
+    }
+    
+    /// <summary>
+    /// Воспроизводит звук смерти юнита через временный объект, чтобы звук проигрался даже после уничтожения юнита
+    /// </summary>
+    private void PlayDeathSound()
+    {
+        if (unitDeathSound == null)
+        {
+            return;
+        }
+        
+        // Останавливаем все другие звуки перед воспроизведением звука смерти
+        if (unitAudioSource != null) unitAudioSource.Stop();
+        
+        // Создаем временный объект для воспроизведения звука смерти
+        // Этот объект не будет уничтожен вместе с юнитом
+        GameObject tempSoundObject = new GameObject("TempDeathSound");
+        tempSoundObject.transform.position = transform.position;
+        AudioSource tempAudioSource = tempSoundObject.AddComponent<AudioSource>();
+        
+        // Настраиваем AudioSource
+        tempAudioSource.spatialBlend = 1f; // 3D звук
+        tempAudioSource.minDistance = 5f;
+        tempAudioSource.maxDistance = 20f;
+        tempAudioSource.priority = 0; // Высокий приоритет
+        
+        float volume = PlayerPrefs.HasKey("SFXVolume") ? PlayerPrefs.GetFloat("SFXVolume") : 1f;
+        tempAudioSource.PlayOneShot(unitDeathSound, volume);
+        
+        // Уничтожаем временный объект после проигрывания звука
+        Destroy(tempSoundObject, unitDeathSound.length + 0.1f);
+    }
+    
+    /// <summary>
+    /// Перемещает юнита к указанной позиции сетки плавно (для использования ботом)
+    /// </summary>
+    /// <param name="targetPos">Целевая позиция на сетке</param>
+    public void MoveToGridPosition(Vector2Int targetPos)
+    {
+        if (ChessGrid.Instance == null) return;
+        
+        Vector3 targetWorldPos = ChessGrid.Instance.GridToWorldPosition(targetPos.x, targetPos.y);
+        
+        // Запускаем корутину для плавного перемещения
+        StartCoroutine(MoveToPositionCoroutine(targetWorldPos, targetPos));
+    }
+    
+    /// <summary>
+    /// Корутина для плавного перемещения юнита к целевой позиции
+    /// </summary>
+    private IEnumerator MoveToPositionCoroutine(Vector3 targetWorldPos, Vector2Int targetGridPos)
+    {
+        Vector3 startPos = transform.position;
+        float distance = Vector3.Distance(startPos, targetWorldPos);
+        // Получаем скорость движения (используем публичное свойство или поле)
+        float unitMoveSpeed = moveSpeed;
+        float duration = distance / unitMoveSpeed; // Время движения зависит от расстояния и скорости
+        duration = Mathf.Clamp(duration, 0.5f, 3f); // Увеличиваем максимальное время для плавности
+        
+        float elapsedTime = 0f;
+
+        SetExternalMoveAnimation(true, unitMoveSpeed);
+        
+        // Поворачиваем юнита к цели
+        Vector3 direction = (targetWorldPos - startPos).normalized;
+        direction.y = 0;
+        if (direction != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(direction);
+        }
+        
+        // Плавное перемещение
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / duration;
+            
+            // Используем CharacterController для перемещения
+            if (controller != null && controller.enabled)
+            {
+                Vector3 currentPos = Vector3.Lerp(startPos, targetWorldPos, t);
+                Vector3 moveVector = currentPos - transform.position;
+                moveVector.y = 0; // Игнорируем вертикальное движение
+                controller.Move(moveVector);
+            }
+            else
+            {
+                transform.position = Vector3.Lerp(startPos, targetWorldPos, t);
+            }
+            
+            yield return null;
+        }
+        
+        // Финальная позиция (точно на сетке)
+        if (controller != null)
+        {
+            controller.enabled = false;
+            transform.position = targetWorldPos;
+            controller.enabled = true;
+        }
+        else
+        {
+            transform.position = targetWorldPos;
+        }
+        
+        // Обновляем позицию на сетке
+        SetCurrentGridPosition(targetGridPos);
+        SnapToGrid();
+        ConsumeMoveMeters(distance);
+        SetExternalMoveAnimation(false);
+    }
+    
+    public void RefreshGridPositionFromWorld()
+    {
+        if (ChessGrid.Instance == null) return;
+        SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
+    }
+
+    /// <summary>Ограничение шага движения в экшене по NavMesh (танк и др.).</summary>
+    public Vector3 ConstrainActionMoveToNavMesh(Vector3 moveVector) => ConstrainMoveVectorToNavMesh(moveVector);
+
+    /// <summary>Вертикальный наклон камеры экшена (танк вызывает вместе с наклоном ствола).</summary>
+    public void ApplyActionLookPitchDelta(float pitchDeltaDeg)
+    {
+        xRotation -= pitchDeltaDeg;
+        xRotation = Mathf.Clamp(xRotation, -maxVerticalAngle, maxVerticalAngle);
+        if (cameraAttachPoint != null)
+            cameraAttachPoint.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+    }
+
+    /// <summary>Текущий pitch камеры экшена (локальный X на cameraAttachPoint), градусы.</summary>
+    public float GetActionLookPitchDegrees() => xRotation;
+
+    /// <summary>Жёсткий clamp вертикали прицела (танк и др.), в тех же градусах, что <see cref="GetActionLookPitchDegrees"/>.</summary>
+    public void ClampActionLookPitchAbsolute(float minDeg, float maxDeg)
+    {
+        if (minDeg > maxDeg)
+            (minDeg, maxDeg) = (maxDeg, minDeg);
+        xRotation = Mathf.Clamp(xRotation, minDeg, maxDeg);
+        if (cameraAttachPoint != null)
+            cameraAttachPoint.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+    }
+    
+    public float CalculateNavMeshPathLength(Vector3 targetWorldPos)
+    {
+        NavMeshPath path = new NavMeshPath();
+        if (!NavMesh.CalculatePath(transform.position, targetWorldPos, NavMesh.AllAreas, path) ||
+            path.corners == null || path.corners.Length < 2)
+        {
+            return 0f;
+        }
+        
+        float length = 0f;
+        for (int i = 1; i < path.corners.Length; i++)
+        {
+            length += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+        }
+        return length;
+    }
+    
+    private Vector3 ConstrainMoveVectorToNavMesh(Vector3 moveVector)
+    {
+        if (!constrainActionMovementToNavMesh || moveVector.sqrMagnitude <= 0f)
+        {
+            return moveVector;
+        }
+
+        Vector3 targetPos = transform.position + moveVector;
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, Mathf.Max(0.1f, navMeshSampleRadius), NavMesh.AllAreas))
+        {
+            Vector3 adjusted = hit.position - transform.position;
+            adjusted.y = 0f;
+            return adjusted;
+        }
+
+        return Vector3.zero;
+    }
+    
+    /// <summary>
+    /// Находит ближайшего вражеского юнита (для использования ботом)
+    /// </summary>
+    /// <returns>Ближайший вражеский юнит или null, если не найден</returns>
+    public Unit GetNearestEnemy()
+    {
+        Unit[] allUnits = FindObjectsByType<Unit>(FindObjectsInactive.Exclude);
+        Unit nearestEnemy = null;
+        float nearestDistance = float.MaxValue;
+        
+        foreach (Unit enemy in allUnits)
+        {
+            if (enemy == null || enemy.owner == this.owner || enemy.GetHealth() <= 0) continue;
+            
+            float distance = Vector3.Distance(transform.position, enemy.transform.position);
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestEnemy = enemy;
+            }
+        }
+        
+        return nearestEnemy;
+    }
+    
+    
+}

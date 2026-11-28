@@ -6,10 +6,10 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Osowiec/OsowiecHQ.unity
+    path: Assets/Osowiec/Scenes/OsowiecHQ.unity
     guid: bfb7aba50f79ede44be36ef9aa4f2853
   - enabled: 1
-    path: Assets/Osowiec/Osowiec.unity
+    path: Assets/Osowiec/Scenes/Osowiec.unity
     guid: 4ade1ff6df958ca43a7ea217ff928705
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: d6b18c0dd5ad04740880ef4399ec23bd, type: 2}

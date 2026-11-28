@@ -72,6 +72,7 @@ public static class OsowiecFieldCast
     {
         materials.Clear();
         controllers.Clear();
+        OsowiecProjectPaths.EnsureFolder(OsowiecProjectPaths.PrefabFolder);
         if (!AssetDatabase.IsValidFolder(Generated.TrimEnd('/')))
             AssetDatabase.CreateFolder(Folder.TrimEnd('/'), "Game");
         foreach (string role in roles)
@@ -250,7 +251,7 @@ public static class OsowiecFieldCast
             data.FindProperty("ammoReserve").intValue=issue.startingReserveAmmo;
             data.FindProperty("isReloading").boolValue=false;
             data.ApplyModifiedPropertiesWithoutUndo();
-            return PrefabUtility.SaveAsPrefabAsset(root, Generated + modelName + ".prefab").GetComponent<Weapon>();
+            return PrefabUtility.SaveAsPrefabAsset(root, OsowiecProjectPaths.Prefab(modelName)).GetComponent<Weapon>();
         }
         finally { Object.DestroyImmediate(root); }
     }
@@ -263,13 +264,14 @@ public static class OsowiecFieldCast
             var model = Visual(modelName, root.transform);
             if (modelName.EndsWith("Carbine", StringComparison.Ordinal))
                 Marker(model.transform, "Distant_carbine").GetComponent<Renderer>().enabled = false;
-            return PrefabUtility.SaveAsPrefabAsset(root, Generated + modelName + "View.prefab");
+            return PrefabUtility.SaveAsPrefabAsset(root, OsowiecProjectPaths.Prefab(modelName + "View"));
         }
         finally { Object.DestroyImmediate(root); }
     }
 
     public static GameObject MercyCartPrefab()
     {
+        OsowiecProjectPaths.EnsureFolder(OsowiecProjectPaths.PrefabFolder);
         if (!AssetDatabase.IsValidFolder(Generated.TrimEnd('/')))
             AssetDatabase.CreateFolder(Folder.TrimEnd('/'), "Game");
         var root = new GameObject("Mercy cart");
@@ -310,7 +312,7 @@ public static class OsowiecFieldCast
             crewAnchor.SetParent(root.transform,false);
             crewAnchor.localPosition=new Vector3(0,0,-1.34f);
             mechanism.orderly=OsowiecWardBuilder.MakeAttendant(crewAnchor,"Санитар обоза");
-            return PrefabUtility.SaveAsPrefabAsset(root, Generated+"MercyCart.prefab");
+            return PrefabUtility.SaveAsPrefabAsset(root, OsowiecProjectPaths.Prefab("MercyCart"));
         }
         finally { Object.DestroyImmediate(root); }
     }
@@ -320,7 +322,7 @@ public static class OsowiecFieldCast
     public static string BuildUnit(string baseName, string display, Weapon rifle)
     {
         string role = baseName == "Pawn" ? "Assault" : baseName == "Bishop" ? "Scout" : "Support";
-        string path = Generated + role + "-Unit.prefab";
+        string path = OsowiecProjectPaths.Prefab(role + "-Unit");
         UnitPrefab(baseName, display, rifle, role, path);
         UnitPrefab(baseName, display, rifle, "Sentry", EnemyPath(path));
         return path;

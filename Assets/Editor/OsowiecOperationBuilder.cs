@@ -11,14 +11,15 @@ using UnityEngine.UI;
 
 public static class OsowiecOperationBuilder
 {
-    const string Mission = "Assets/Osowiec/Osowiec.unity";
-    const string Headquarters = "Assets/Osowiec/OsowiecHQ.unity";
+    const string Mission = OsowiecProjectPaths.OperationScene;
+    const string Headquarters = OsowiecProjectPaths.HeadquartersScene;
 
     [MenuItem("Steel and Ashes/Build Osowiec Operation")]
     public static void Generate()
     {
         var scene = EditorSceneManager.OpenScene("Assets/Scenes/VerdunGraybox.unity", OpenSceneMode.Single);
-        Directory.CreateDirectory("Assets/Osowiec");
+        OsowiecProjectPaths.EnsureFolder(OsowiecProjectPaths.SceneFolder);
+        OsowiecProjectPaths.EnsureFolder(OsowiecProjectPaths.NavigationFolder);
         foreach (var root in scene.GetRootGameObjects())
             if (root.name is "Verdun Graybox" or "Player1Units" or "Player2Units")
                 root.SetActive(false);
@@ -59,7 +60,6 @@ public static class OsowiecOperationBuilder
             var west=OsowiecDeploymentSectors.Cells[0];
             so.FindProperty("deploymentZoneMin").vector2IntValue = west.Aggregate(Vector2Int.Min);
             so.FindProperty("deploymentZoneMax").vector2IntValue = west.Aggregate(Vector2Int.Max);
-            so.FindProperty("requireExactlyOneKing").boolValue = false;
             so.FindProperty("requireDeployedInfantry").boolValue = false;
             so.FindProperty("deploymentSpawnYawDegrees").floatValue = 90;
             so.FindProperty("deploymentZoneColor").colorValue = new Color(.74f, .65f, .38f, .48f);
@@ -127,7 +127,7 @@ public static class OsowiecOperationBuilder
         EditorUtility.SetDirty(particles);
         operation.AddComponent<OsowiecShotEffects>().softParticles=particles;
         var view = operation.AddComponent<OsowiecWeaponView>();
-        view.model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Osowiec/Art/Cast/Game/RamCarbineView.prefab");
+        view.model = AssetDatabase.LoadAssetAtPath<GameObject>(OsowiecProjectPaths.Prefab("RamCarbineView"));
         view.hands = OsowiecFieldCast.ViewPrefab("FieldHands");
         view.reloadClip = OsowiecReloadClip.Build();
         var planner = operation.AddComponent<OsowiecPlanner>();
@@ -142,7 +142,7 @@ public static class OsowiecOperationBuilder
         surface.BuildNavMesh();
         if (surface.navMeshData == null)
             throw new InvalidOperationException("Osowiec navigation bake produced no data.");
-        var navPath = "Assets/Osowiec/OsowiecNavMesh.asset";
+        var navPath = OsowiecProjectPaths.OperationNavMesh;
         var oldNav = AssetDatabase.LoadAssetAtPath<NavMeshData>(navPath);
         if (oldNav == null)
             AssetDatabase.CreateAsset(surface.navMeshData, navPath);

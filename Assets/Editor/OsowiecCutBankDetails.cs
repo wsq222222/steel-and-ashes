@@ -11,7 +11,7 @@ public static class OsowiecCutBankDetails
 {
     const string Folder = "Assets/Osowiec/Art/Fort1916/";
     const string MeshPath = Folder + "Exposed cut banks.asset";
-    const string ScenePath = "Assets/Osowiec/Osowiec.unity";
+    const string ScenePath = OsowiecProjectPaths.OperationScene;
     const string Label = "Осевший торф и обнажённые корни";
 
     sealed class Tile

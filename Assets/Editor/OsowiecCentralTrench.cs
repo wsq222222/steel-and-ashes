@@ -14,7 +14,7 @@ public static class OsowiecCentralTrench
     internal static readonly Vector2[] Course = {
         new(-25.6f,2.5f), new(-21.4f,2.5f), new(-19.25f,1), new(-15,1)
     };
-    const string Field = "Assets/Osowiec/Osowiec.unity";
+    const string Field = OsowiecProjectPaths.OperationScene;
     const string Art = "Assets/Osowiec/Art/Fort1916/";
     const string Prefix = "Central trench - ";
     const string Root = "Центральная траншея · сбор";

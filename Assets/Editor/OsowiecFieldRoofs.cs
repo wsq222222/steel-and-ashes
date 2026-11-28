@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 public static class OsowiecFieldRoofs
 {
     const string Art = "Assets/Osowiec/Art/Fort1916/";
-    const string ScenePath = "Assets/Osowiec/Osowiec.unity";
+    const string ScenePath = OsowiecProjectPaths.OperationScene;
     const string SodAsset = "Main casemate living turf";
     const string WardAsset = "Hospital lashed rain fly";
     const float West = -53.66f, East = -42.72f, Front = -12.80f, Rear = -7f;

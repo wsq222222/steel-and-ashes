@@ -8,11 +8,11 @@ using UnityEngine.SceneManagement;
 
 public static class OsowiecReliefReview
 {
-    const string Mission="Assets/Osowiec/Osowiec.unity";
+    const string Mission=OsowiecProjectPaths.OperationScene;
 
     public static void VerifyDrive()
     {
-        var prefab=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Osowiec/Art/Cast/Game/MercyCart.prefab");
+        var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(OsowiecProjectPaths.Prefab("MercyCart"));
         var cart=UnityEngine.Object.Instantiate(prefab);
         cart.hideFlags=HideFlags.HideAndDontSave;
         try
@@ -43,7 +43,7 @@ public static class OsowiecReliefReview
             Physics.SyncTransforms();
             VerifyFieldSolids();
             VerifyWire();
-            var map=AssetDatabase.LoadAssetAtPath<NavMeshData>("Assets/Osowiec/OsowiecNavMesh.asset");
+            var map=AssetDatabase.LoadAssetAtPath<NavMeshData>(OsowiecProjectPaths.OperationNavMesh);
             if(!NavMesh.SamplePosition(OsowiecReliefColumn.Hospital,out _,2f,NavMesh.AllAreas))
                 added=NavMesh.AddNavMeshData(map);
             VerifyRoutes();

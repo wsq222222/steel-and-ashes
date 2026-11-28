@@ -6,7 +6,7 @@ using UnityEngine;
 
 public static class OsowiecFieldTelephoneArt
 {
-    const string Mission = "Assets/Osowiec/Osowiec.unity";
+    const string Mission = OsowiecProjectPaths.OperationScene;
     const string FortArt = "Assets/Osowiec/Art/Fort1916/";
     const string ModelPath = FortArt + "FieldTelephoneStation.fbx";
     const string HeadquartersArt = "Assets/Osowiec/HQ/Art/";

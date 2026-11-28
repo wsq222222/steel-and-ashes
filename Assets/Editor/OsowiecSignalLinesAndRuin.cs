@@ -10,7 +10,7 @@ using Sample = OsowiecFieldRoofs.Sample;
 public static class OsowiecSignalLinesAndRuin
 {
     const string Art = "Assets/Osowiec/Art/Fort1916/";
-    const string Mission = "Assets/Osowiec/Osowiec.unity";
+    const string Mission = OsowiecProjectPaths.OperationScene;
     static readonly Vector2[] Stakes = { new(-49,-20),new(-39,-20),new(-31,-13),new(-21.8f,-7.3f),
         new(-17,-6),new(-11,-16),new(4,-19),new(18,-16),new(26,-12),new(41,-14),new(49,-6) };
     static Material Mat(string name)=>AssetDatabase.LoadAssetAtPath<Material>(Art+name+".mat")

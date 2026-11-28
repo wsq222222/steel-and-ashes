@@ -14,7 +14,7 @@ using Object = UnityEngine.Object;
 
 public static partial class OsowiecHeadquartersBuilder
 {
-    public const string ScenePath = "Assets/Osowiec/OsowiecHQ.unity";
+    public const string ScenePath = OsowiecProjectPaths.HeadquartersScene;
     private const string Folder = "Assets/Osowiec/HQ/";
     private const string SourceScene = "Assets/Scenes/HubBase.unity";
 
@@ -27,6 +27,7 @@ public static partial class OsowiecHeadquartersBuilder
     [MenuItem("Steel & Ashes/Generate Osowiec Headquarters")]
     public static void Generate()
     {
+        OsowiecProjectPaths.EnsureFolder(OsowiecProjectPaths.SceneFolder);
         Directory.CreateDirectory(Folder);
         AssetDatabase.Refresh();
         var source = EditorSceneManager.OpenScene(SourceScene, OpenSceneMode.Single);

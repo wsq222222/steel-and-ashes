@@ -21,7 +21,7 @@ public static class OsowiecRunoffReview
         NavMeshData temporary=null;
         try
         {
-            var scene=EditorSceneManager.OpenScene("Assets/Osowiec/Osowiec.unity",OpenSceneMode.Single);
+            var scene=EditorSceneManager.OpenScene(OsowiecProjectPaths.OperationScene,OpenSceneMode.Single);
             var objects=scene.GetRootGameObjects();
             var events=objects.SelectMany(o=>o.GetComponentsInChildren<OsowiecGroundEvents>()).Single();
             var surface=objects.SelectMany(o=>o.GetComponentsInChildren<NavMeshSurface>()).Single(s=>s.enabled);
@@ -57,7 +57,7 @@ public static class OsowiecRunoffReview
         }
         finally
         {
-            EditorSceneManager.OpenScene("Assets/Osowiec/Osowiec.unity",OpenSceneMode.Single);
+            EditorSceneManager.OpenScene(OsowiecProjectPaths.OperationScene,OpenSceneMode.Single);
             EditorSceneManager.RestoreSceneManagerSetup(setup);
             if(temporary) UnityEngine.Object.DestroyImmediate(temporary);
         }

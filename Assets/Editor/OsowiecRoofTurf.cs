@@ -147,7 +147,7 @@ public static class OsowiecRoofTurf
     public static void BakeCurrentScene()
     {
         var scene=EditorSceneManager.GetActiveScene();
-        if(scene.path!="Assets/Osowiec/Osowiec.unity")scene=EditorSceneManager.OpenScene("Assets/Osowiec/Osowiec.unity");
+        if(scene.path!=OsowiecProjectPaths.OperationScene)scene=EditorSceneManager.OpenScene(OsowiecProjectPaths.OperationScene);
         Install(GameObject.Find("Osowiec · Fort I").transform);
         EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssets();
     }

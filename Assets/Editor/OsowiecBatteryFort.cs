@@ -12,7 +12,7 @@ using Object = UnityEngine.Object;
 public static partial class OsowiecBatteryFort
 {
     const string Art = "Assets/Osowiec/Art/Fort1916/";
-    const string Mission = "Assets/Osowiec/Osowiec.unity";
+    const string Mission = OsowiecProjectPaths.OperationScene;
     const string Name = "Восточная батарея · нижний ход и галерея";
     const float TunnelX = 46f, Bottom = -2.85f, Deck = 3.55f;
     public static Vector3 GalleryPost => new(TunnelX,Deck,1.1f);

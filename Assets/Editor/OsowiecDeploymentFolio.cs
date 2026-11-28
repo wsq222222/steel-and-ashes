@@ -159,7 +159,7 @@ public static partial class OsowiecHeadquartersBuilder
     [MenuItem("Steel and Ashes/Update field deployment sheet")]
     public static void UpdateDeploymentSheet()
     {
-        const string path="Assets/Osowiec/Osowiec.unity";
+        const string path=OsowiecProjectPaths.OperationScene;
         var scene=UnityEngine.SceneManagement.SceneManager.GetSceneByPath(path);
         bool opened=!scene.IsValid() || !scene.isLoaded;
         if(opened)scene=UnityEditor.SceneManagement.EditorSceneManager.OpenScene(path,UnityEditor.SceneManagement.OpenSceneMode.Additive);

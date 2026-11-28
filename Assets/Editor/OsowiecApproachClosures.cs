@@ -9,7 +9,7 @@ using Object=UnityEngine.Object;
 
 public static class OsowiecApproachClosures
 {
-    const string Mission="Assets/Osowiec/Osowiec.unity";
+    const string Mission=OsowiecProjectPaths.OperationScene;
     const string Root="Запруды у каземата и речного вала";
     const string Materials="Assets/Osowiec/Art/Fort1916/";
     static Material wood,bark,iron;

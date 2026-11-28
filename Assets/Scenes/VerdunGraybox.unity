@@ -4491,7 +4491,6 @@ MonoBehaviour:
   defaultUnitInfoPanelSprite: {fileID: 0}
   createMinimalUiIfMissing: 0
   requireAtLeastOneUnit: 1
-  requireExactlyOneKing: 0
   requireDeployedInfantry: 1
   deploymentSpawnYawDegrees: 0
   showDeploymentZoneOverlay: 1
@@ -10650,15 +10649,13 @@ MonoBehaviour:
   preDiceRollDelay: 1
   dicePresentationDelay: 2
   postDiceRollDelay: 0.2
-  postBotTurnDelayBeforePlayer: 0.4
   botIntroCameraSettleDelay: 0.55
   moveDelay: 0.2
   attackDelay: 0.5
   attackRange: 2.2
   enemyDetectionRange: 4
   approachDistance: 0.8
-  qteSuccessChance: 0.5
-  debugMission1Bot: 1
+  debugBot: 1
   visionRange: 15
   visionFovDegrees: 95
   visionEyeOffsetY: 1.5
