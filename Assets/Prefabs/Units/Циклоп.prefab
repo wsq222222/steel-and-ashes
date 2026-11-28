@@ -5318,7 +5318,7 @@ GameObject:
   - component: {fileID: 8187022934830834004}
   - component: {fileID: 6646014376843896052}
   m_Layer: 0
-  m_Name: Bishop
+  m_Name: "\u0426\u0438\u043A\u043B\u043E\u043F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7967,7 +7967,7 @@ GameObject:
   - component: {fileID: -5064905208343261603}
   - component: {fileID: -3036424525815405329}
   m_Layer: 0
-  m_Name: Bishop
+  m_Name: "\u0426\u0438\u043A\u043B\u043E\u043F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8111,8 +8111,8 @@ MonoBehaviour:
   unitMoveSound: {fileID: 8300000, guid: c4f90ea03221f5443a7a7390f33ebc6a, type: 3}
   unitMoveSoundVolume: 0.154
   unitMoveSoundMinSpeed: 0.15
-  bishopFireSound: {fileID: 8300000, guid: 65dce5d78566ec24cb8e5e63ed8e434f, type: 3}
-  bishopReloadSound: {fileID: 8300000, guid: 6cbcddc75570f164cbc9d500f3f077e4, type: 3}
+  observerFireSound: {fileID: 8300000, guid: 65dce5d78566ec24cb8e5e63ed8e434f, type: 3}
+  observerReloadSound: {fileID: 8300000, guid: 6cbcddc75570f164cbc9d500f3f077e4, type: 3}
   unitAudioSource: {fileID: 0}
   unitDisplayNameOverride: 
   tacticalPortrait: {fileID: 1680124069, guid: 1503df353610a344bb3370b2d0c89d84, type: 3}
@@ -8122,7 +8122,7 @@ MonoBehaviour:
   attackStateName: attack
   attackDamageStartTime: 0.3
   attackDamageEndTime: 0.5
-  rangedShootStateName: BishopShoot
+  rangedShootStateName: Shoot
   rangedShootFireNormalizedTime: 1
   rangedShootAnimTimeoutSeconds: 0.3
 --- !u!114 &-5064905208343261603

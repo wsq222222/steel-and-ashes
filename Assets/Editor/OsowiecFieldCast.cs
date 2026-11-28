@@ -317,21 +317,22 @@ public static class OsowiecFieldCast
         finally { Object.DestroyImmediate(root); }
     }
 
-    public static string EnemyPath(string ally) => ally.Replace(".prefab", "-Enemy.prefab");
+    public static string EnemyPath(string ally) => ally.Replace(".prefab", "-Противник.prefab");
 
-    public static string BuildUnit(string baseName, string display, Weapon rifle)
+    public static string BuildUnit(ChessUnitType soldier, string uniform, Weapon rifle)
     {
-        string role = baseName == "Pawn" ? "Assault" : baseName == "Bishop" ? "Scout" : "Support";
-        string path = OsowiecProjectPaths.Prefab(role + "-Unit");
-        UnitPrefab(baseName, display, rifle, role, path);
-        UnitPrefab(baseName, display, rifle, "Sentry", EnemyPath(path));
+        string name = soldier.ToString();
+        var template = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Units/" + name + ".prefab");
+        if (!template || !template.TryGetComponent<Unit>(out var unit) || unit.chessType != soldier || !rifle)
+            throw new InvalidOperationException("Missing or mismatched unit template or weapon for " + name);
+        string path = OsowiecProjectPaths.Prefab(name);
+        UnitPrefab(template, name, rifle, uniform, path);
+        UnitPrefab(template, name, rifle, "Sentry", EnemyPath(path));
         return path;
     }
 
-    static void UnitPrefab(string rulesName, string display, Weapon rifle, string role, string path)
+    static void UnitPrefab(GameObject template, string display, Weapon rifle, string role, string path)
     {
-        var template = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Units/" + rulesName + ".prefab");
-        if (template == null || rifle == null) throw new InvalidOperationException("Missing unit rules or weapon for " + role);
         var root = (GameObject)PrefabUtility.InstantiatePrefab(template);
         try
         {
@@ -343,7 +344,7 @@ public static class OsowiecFieldCast
                 Object.DestroyImmediate(component);
             }
             while (root.transform.childCount > 0) Object.DestroyImmediate(root.transform.GetChild(0).gameObject);
-            root.name = role + " field unit";
+            root.name = Path.GetFileNameWithoutExtension(path);
             root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             root.transform.localScale = Vector3.one;
             var capsule = root.GetComponent<CharacterController>();
@@ -392,11 +393,12 @@ public static class OsowiecFieldCast
                 info.FindProperty("moveSpeed").floatValue = speed;
             }
             info.FindProperty("damage").intValue = rifle.Config.damagePerHit;
+            info.FindProperty("rangedShootStateName").stringValue = "Fire";
             Assign(info,"unitMoveSound",null);
             Assign(info,"takeDamageSound",AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Osowiec/Atmosphere/Resources/OsowiecSound/FieldInjury.wav"));
             Assign(info,"unitDeathSound",AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Osowiec/Atmosphere/Resources/OsowiecSound/FieldFall.wav"));
-            Assign(info,"bishopFireSound",null);
-            Assign(info,"bishopReloadSound",null);
+            Assign(info,"observerFireSound",null);
+            Assign(info,"observerReloadSound",null);
             Assign(info, "cameraAttachPoint", eyes); Assign(info,"weaponSocket",socket);
             Assign(info,"startingWeaponPrefab",null); Assign(info,"equippedWeapon",gun.GetComponent<Weapon>());
             var portraitPath = Folder + role + "Portrait.png";

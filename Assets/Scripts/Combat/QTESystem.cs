@@ -34,12 +34,12 @@ public class QTESystem : MonoBehaviour
     /// </summary>
     private Dictionary<ChessUnitType, QTECapabilities> unitCapabilities = new Dictionary<ChessUnitType, QTECapabilities>
     {
-        { ChessUnitType.Pawn, new QTECapabilities { canBlock = true } },
+        { ChessUnitType.Молот, new QTECapabilities { canBlock = true } },
         { ChessUnitType.Horse, new QTECapabilities { canBlock = true } },
-        { ChessUnitType.Bishop, new QTECapabilities { canBlock = true } },
+        { ChessUnitType.Циклоп, new QTECapabilities { canBlock = true } },
         { ChessUnitType.Queen, new QTECapabilities { canBlock = true } },
         { ChessUnitType.King, new QTECapabilities { canBlock = true } },
-        { ChessUnitType.Guardian, new QTECapabilities { canBlock = true } }
+        { ChessUnitType.Гончая, new QTECapabilities { canBlock = true } }
     };
     
     void Awake()

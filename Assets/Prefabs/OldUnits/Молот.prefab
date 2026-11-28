@@ -47,7 +47,7 @@ GameObject:
   - component: {fileID: 6592258953867717320}
   - component: {fileID: 3747208262001165449}
   m_Layer: 3
-  m_Name: PawnUnit
+  m_Name: "\u041C\u043E\u043B\u043E\u0442"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

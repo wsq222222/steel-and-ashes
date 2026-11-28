@@ -39,8 +39,8 @@ public sealed class OsowiecPlanner : MonoBehaviour
 
     internal static float FullBudget(Unit unit) => unit.chessType switch
     {
-        ChessUnitType.Pawn => 15,
-        ChessUnitType.Guardian => 24,
+        ChessUnitType.Молот => 15,
+        ChessUnitType.Гончая => 24,
         _ => 18
     };
 
@@ -404,7 +404,7 @@ public sealed class OsowiecPlanner : MonoBehaviour
         float x = dock.x + 14 * scale;
         if (selected != null && selected.GetHealth() > 0 && portraits != null)
         {
-            int column = selected.chessType switch { ChessUnitType.Pawn => 0, ChessUnitType.Bishop => 2, _ => 1 };
+            int column = selected.chessType switch { ChessUnitType.Молот => 0, ChessUnitType.Циклоп => 2, _ => 1 };
             GUI.DrawTextureWithTexCoords(new Rect(x, dock.y + 13 * scale, 88 * scale, 88 * scale), portraits,
                 new Rect(column / 3f, 0, 1 / 3f, 1));
             x += 103 * scale;

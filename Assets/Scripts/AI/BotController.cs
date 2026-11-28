@@ -47,10 +47,10 @@ public class BotController : MonoBehaviour
     private static readonly Dictionary<ChessUnitType, int> PieceValues = new Dictionary<ChessUnitType, int>
     {
         { ChessUnitType.Queen, 9 },
-        { ChessUnitType.Guardian, 5 },
-        { ChessUnitType.Bishop, 3 },
+        { ChessUnitType.Гончая, 5 },
+        { ChessUnitType.Циклоп, 3 },
         { ChessUnitType.Horse, 3 },
-        { ChessUnitType.Pawn, 1 },
+        { ChessUnitType.Молот, 1 },
         { ChessUnitType.King, 100 }
     };
 
@@ -645,14 +645,14 @@ public class BotController : MonoBehaviour
     }
 
     /// <summary>
-    /// PvBot: танк игрока не выбирается целью, кроме как для врага-Guardian (AT).
+    /// PvBot: танк игрока не выбирается целью, кроме бойца с противотанковым оружием.
     /// </summary>
     private static bool BotMayTargetUnitAsEnemy(Unit attacker, Unit potentialEnemy)
     {
         if (potentialEnemy == null || !potentialEnemy.IsTankUnit) return true;
         if (potentialEnemy.owner != Player.Player1) return true;
         if (attacker == null || attacker.owner != Player.Player2) return true;
-        return attacker.chessType == ChessUnitType.Guardian;
+        return attacker.chessType == ChessUnitType.Гончая;
     }
 
     /// <summary>
@@ -666,7 +666,7 @@ public class BotController : MonoBehaviour
         }
 
         if (attacker.owner == Player.Player2 && target.owner == Player.Player1 && target.IsTankUnit &&
-            attacker.chessType != ChessUnitType.Guardian)
+            attacker.chessType != ChessUnitType.Гончая)
             yield break;
 
         // Если у атакующего есть экипированное оружие — атакуем огнестрелом (hitscan) без рывка/WeaponCollider.

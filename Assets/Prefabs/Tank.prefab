@@ -109,8 +109,8 @@ MonoBehaviour:
   snapGroundYClearance: 0.08
   takeDamageSound: {fileID: 0}
   unitDeathSound: {fileID: 0}
-  bishopFireSound: {fileID: 0}
-  bishopReloadSound: {fileID: 0}
+  observerFireSound: {fileID: 0}
+  observerReloadSound: {fileID: 0}
   unitAudioSource: {fileID: 0}
   unitDisplayNameOverride: Tank
   tacticalPortrait: {fileID: -1228184200, guid: a0658a6e93c43e644912dbc955591069, type: 3}
@@ -120,7 +120,7 @@ MonoBehaviour:
   attackStateName: 
   attackDamageStartTime: 0
   attackDamageEndTime: 0
-  rangedShootStateName: BishopShoot
+  rangedShootStateName: Shoot
   rangedShootFireNormalizedTime: 0.72
   rangedShootAnimTimeoutSeconds: 1.5
 --- !u!114 &7661899131456582193

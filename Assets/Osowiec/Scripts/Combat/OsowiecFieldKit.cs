@@ -21,8 +21,8 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
     }
     internal static bool Throwable(OsowiecKitItem item) => item is OsowiecKitItem.Grenade or OsowiecKitItem.Smoke or OsowiecKitItem.Gas;
     public static int Remaining(Unit u,OsowiecKitItem item) =>
-        !Throwable(item) ? -1 : !u || (item==OsowiecKitItem.Gas && u.chessType!=ChessUnitType.Pawn) ||
-        (item==OsowiecKitItem.Smoke && u.chessType==ChessUnitType.Pawn) || Instance && Instance.used.Contains((u,item)) ? 0 : 1;
+        !Throwable(item) ? -1 : !u || (item==OsowiecKitItem.Gas && u.chessType!=ChessUnitType.Молот) ||
+        (item==OsowiecKitItem.Smoke && u.chessType==ChessUnitType.Молот) || Instance && Instance.used.Contains((u,item)) ? 0 : 1;
     internal readonly OsowiecKitThrow throwing=new();
     internal Unit ScopeTarget => scope ? SightedEnemy : null;
     internal Unit Marked => tagged && taggedUntil>round ? tagged : null;
@@ -75,7 +75,7 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
     Coroutine jump;
     internal bool SpendThrowable(Unit unit,OsowiecKitItem item) => unit && Throwable(item) && Remaining(unit,item)>0 && used.Add((unit,item));
     public static bool HoldPosition(Unit u) =>
-        (u.FieldTurn.RifleSpent && u.chessType != ChessUnitType.Guardian) ||
+        (u.FieldTurn.RifleSpent && u.chessType != ChessUnitType.Гончая) ||
         (Instance != null && Instance.actor == u &&
         (Instance.stopWalking || Instance.scope || Instance.leaping || Instance.chargingLeap));
     public static string Status(Unit u) => Instance && Instance.actor==u ? Instance.note : "";
@@ -169,7 +169,7 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
     public static void Fired(Unit u)
     {
         if (Instance==null || Instance.actor!=u) return;
-        bool scout = u.chessType == ChessUnitType.Guardian;
+        bool scout = u.chessType == ChessUnitType.Гончая;
         Instance.SpendAttack(scout);
         Instance.note = scout && u.GetRemainingMoveMeters() > .02f
             ? OsowiecMenuLanguage.Text("Можно пройти оставшиеся метры.")
@@ -283,7 +283,7 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
         if(keys.qKey.wasPressedThisFrame && !leaping)
         {
             blockFireFrame=Time.frameCount;
-            if(Cooling && actor.chessType!=ChessUnitType.Bishop) note="Снаряжение класса будет готово в следующем ходу";
+            if(Cooling && actor.chessType!=ChessUnitType.Циклоп) note="Снаряжение класса будет готово в следующем ходу";
             else ClassAction();
             feedbackUntil=Time.time+2;
             return;
@@ -298,7 +298,7 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
             return;
         }
         if(keys.hKey.wasPressedThisFrame) { SelectItem(OsowiecKitItem.Grenade); return; }
-        if(keys.vKey.wasPressedThisFrame && actor.chessType==ChessUnitType.Pawn) { SelectItem(OsowiecKitItem.Bayonet); return; }
+        if(keys.vKey.wasPressedThisFrame && actor.chessType==ChessUnitType.Молот) { SelectItem(OsowiecKitItem.Bayonet); return; }
         if(!click || selected==OsowiecKitItem.Rifle) return;
         blockFireFrame=Time.frameCount;
         if(selected==OsowiecKitItem.Bayonet)
@@ -323,14 +323,14 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
         var op=OsowiecOperation.Instance;
         if (op==null || actor==null) return;
         Vector3 at=actor.transform.position;
-        if (actor.chessType==ChessUnitType.Guardian)
+        if (actor.chessType==ChessUnitType.Гончая)
         {
             if (op.Pressure(actor)>.65f) {note="Переждите подавление в укрытии.";return;}
             actor.SetRemainingMoveMeters(actor.GetRemainingMoveMeters()+OsowiecFieldTurn.SprintBonus);
             note=OsowiecMenuLanguage.Text("Гончая   •   Добавлено 6 м"); FinishSkill();
             OsowiecAtmosphere.PlayPneumatic(at); return;
         }
-        if (actor.chessType==ChessUnitType.Bishop)
+        if (actor.chessType==ChessUnitType.Циклоп)
         {
             if (op.MaskOn(actor)) {note="Снимите маску для оптики.";return;}
             var gun=actor.GetEquippedWeapon();
@@ -448,7 +448,7 @@ public sealed partial class OsowiecFieldKit : MonoBehaviour
         }
         if(!OsowiecFieldSettings.ReducedEffects) StartCoroutine(Flash(origin));
         if (!thrower) return;
-        bool heavy=thrower.chessType==ChessUnitType.Pawn;
+        bool heavy=thrower.chessType==ChessUnitType.Молот;
         foreach(var unit in FindObjectsByType<Unit>(FindObjectsInactive.Exclude))
         {
             if(!unit || !unit.isActiveAndEnabled || unit.owner==thrower.owner || unit.GetHealth()<=0) continue;

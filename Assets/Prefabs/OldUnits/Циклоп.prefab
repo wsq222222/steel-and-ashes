@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 9042162916321759010}
   - component: {fileID: 2313007219309929450}
   m_Layer: 3
-  m_Name: BishopUnit
+  m_Name: "\u0426\u0438\u043A\u043B\u043E\u043F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

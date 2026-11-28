@@ -220,8 +220,8 @@ public class TacticalWorldIconsController : MonoBehaviour
         contour.effectDistance = new Vector2(1.4f,-1.4f);
         int column = unit.chessType switch
         {
-            ChessUnitType.Bishop => 1,
-            ChessUnitType.Guardian => 2,
+            ChessUnitType.Циклоп => 1,
+            ChessUnitType.Гончая => 2,
             _ => 0
         };
         photograph.uvRect = new Rect(column / 3f, 0, 1f/3f, 1);

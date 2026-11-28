@@ -20,7 +20,7 @@ public class Weapon : MonoBehaviour
     [Tooltip("Какие слои считаем 'поверхностями' для попадания/трассера. Если не трогать — будет Everything.")]
     [SerializeField] private LayerMask vfxRayMask = ~0;
 
-    [Header("Audio (Bishop / ranged)")]
+    [Header("Звуки стрелкового оружия")]
     [SerializeField] private AudioClip fireSound;
     [SerializeField] private AudioClip reloadSound;
     [Range(0f, 1f)] [SerializeField] private float fireSoundVolume = 1f;
@@ -241,8 +241,8 @@ public class Weapon : MonoBehaviour
 
         ammoInMag = Mathf.Max(0, ammoInMag - 1);
 
-        // Звук перезарядки после выстрела — только Guardian (и танк в TankController). Bishop: R или пустой магазин.
-        if (owner != null && owner.chessType == ChessUnitType.Guardian && ownerUnit != null)
+        // Звук перезарядки после выстрела — только у Гончей и танка. Циклоп перезаряжается по R или при пустом магазине.
+        if (owner != null && owner.chessType == ChessUnitType.Гончая && ownerUnit != null)
             ownerUnit.SchedulePostFireWeaponAudio(this, postFireReloadSoundDelay);
         else
             TryAutoReloadIfEmpty();
@@ -341,11 +341,11 @@ public class Weapon : MonoBehaviour
         CombatSfxLibrary lib = CombatSfxLibrary.Instance;
         if (ownerUnit != null && lib != null)
         {
-            if (ownerUnit.chessType == ChessUnitType.Guardian && lib.GetGuardianFire() != null)
-                return lib.GetGuardianFire();
+            if (ownerUnit.chessType == ChessUnitType.Гончая && lib.GetScoutFire() != null)
+                return lib.GetScoutFire();
         }
 
-        return ownerUnit != null ? ownerUnit.GetBishopFireSoundFallback() : null;
+        return ownerUnit != null ? ownerUnit.GetObserverFireSoundFallback() : null;
     }
 
     private AudioClip ResolveReloadSound()
@@ -356,11 +356,11 @@ public class Weapon : MonoBehaviour
         CombatSfxLibrary lib = CombatSfxLibrary.Instance;
         if (ownerUnit != null && lib != null)
         {
-            if (ownerUnit.chessType == ChessUnitType.Guardian && lib.GetGuardianReload() != null)
-                return lib.GetGuardianReload();
+            if (ownerUnit.chessType == ChessUnitType.Гончая && lib.GetScoutReload() != null)
+                return lib.GetScoutReload();
         }
 
-        return ownerUnit != null ? ownerUnit.GetBishopReloadSoundFallback() : null;
+        return ownerUnit != null ? ownerUnit.GetObserverReloadSoundFallback() : null;
     }
 
     /// <summary>Звук перезарядки после выстрела (вызывается из Unit).</summary>

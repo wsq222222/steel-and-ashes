@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Mission2;
 
 public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
@@ -10,21 +11,24 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
     [SerializeField] private float meleeAttackRange = 3.0f;
     [SerializeField] private float rangedPreferredMinDistance = 8.0f;
     [SerializeField] private float rangedPreferredMaxDistance = 18.0f;
-    [Tooltip("Если пешка может за этот ход дойти до мили-дистанции танка — предпочитаем пешку, чтобы давить и срывать закрепление.")]
-    [SerializeField] private float pawnReachMeleeBonus = 9999f;
-    [Header("Guardian vs tank (acting unit)")]
-    [Tooltip("Бонус к ScoreUnit для Guardian, когда у игрока жив только танк — ходит и подходит к танку в основном ракетчик, остальные почти не выбираются.")]
-    [SerializeField] private float guardianSoloTankActingBonus = 20000f;
-    [Tooltip("Небольшой бонус Guardian к выбору ходящего юнита, пока у игрока есть живая пехота (не ломает общий приоритет).")]
-    [SerializeField] private float guardianFootmenAliveActingNudge = 120f;
+    [Tooltip("Бонус бойцу, который за этот ход может подойти к танку на дистанцию ближнего боя.")]
+    [FormerlySerializedAs("pawnReachMeleeBonus")]
+    [SerializeField] private float meleeReachBonus = 9999f;
+    [Header("Выбор противотанкового бойца")]
+    [Tooltip("Приоритет противотанкового бойца, когда у игрока остался только танк.")]
+    [FormerlySerializedAs("guardianSoloTankActingBonus")]
+    [SerializeField] private float antiTankSoloBonus = 20000f;
+    [Tooltip("Приоритет противотанкового бойца, пока у игрока есть пехота.")]
+    [FormerlySerializedAs("guardianFootmenAliveActingNudge")]
+    [SerializeField] private float antiTankInfantryPresentBonus = 120f;
     [Header("Targeting")]
     [Tooltip("Радиус вокруг танка, где юнит считается 'охраной' (бот может переключаться на неё).")]
     [SerializeField] private float guardRadiusAroundTank = 10f;
     [Tooltip("Как часто бот будет предпочитать бить охрану вместо танка (если охрана рядом). 0..1")]
     [Range(0f, 1f)]
     [SerializeField] private float focusGuardChance = 0.35f;
-    [Header("Fallback when non-Guardian cannot target P1 units")]
-    [Tooltip("Если нет целей-юнитов, не-Guardian идёт к ближайшему DestructibleObjective, иначе к терминалу, иначе на кольцо вокруг танка (не в центр).")]
+    [Header("Обход танка другими бойцами")]
+    [Tooltip("Если нет подходящих боевых целей, боец идёт к ближайшему DestructibleObjective, иначе к терминалу, иначе на кольцо вокруг танка (не в центр).")]
     [SerializeField] private float flankRingMinMeters = 12f;
     [Header("Turn pacing (Mission 2)")]
     [Tooltip("Доп. пауза перед движением/атакой после кубика (камера до кубика в BotController).")]
@@ -182,7 +186,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
         return selected;
     }
 
-    /// <summary>Живой игрок P1 есть, но все не-танки мертвы — цель только танк, ходить к нему должен в первую очередь Guardian.</summary>
+    /// <summary>Живой игрок P1 есть, но все не-танки мертвы — цель только танк, приоритет получает противотанковый боец.</summary>
     private static bool PlayerHasOnlyTankAlive(Unit[] allUnits)
     {
         if (allUnits == null) return false;
@@ -201,8 +205,8 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
     {
         if (unit == null || tankUnit == null) return float.NegativeInfinity;
 
-        bool nonGuardianSolo = soloTank && unit.chessType != ChessUnitType.Guardian;
-        Vector3 anchor = nonGuardianSolo
+        bool needsFlank = soloTank && unit.chessType != ChessUnitType.Гончая;
+        Vector3 anchor = needsFlank
             ? GetNearestPressureAnchorWorld(unit.transform.position, tankUnit)
             : tankUnit.transform.position;
         float distAnchor = HorizontalDistance(unit.transform.position, anchor);
@@ -211,12 +215,12 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
         bool ranged = unit.GetEquippedWeapon() != null && unit.GetEquippedWeapon().Config != null;
         float score = 0f;
 
-        score += nonGuardianSolo ? (1100f - distAnchor) : (1000f - distTank);
+        score += needsFlank ? (1100f - distAnchor) : (1000f - distTank);
 
         if (ranged)
         {
             float range = Mathf.Max(0.1f, unit.GetEquippedWeapon().Config.maxHitRangeMeters);
-            float d = nonGuardianSolo ? distAnchor : distTank;
+            float d = needsFlank ? distAnchor : distTank;
             if (d <= range) score += 400f;
         }
         else
@@ -224,15 +228,15 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
             float desiredMelee = Mathf.Max(0.1f, meleeAttackRange);
             float pathLen = unit.CalculateNavMeshPathLength(anchor);
             if (pathLen > 0.01f && pathLen <= Mathf.Max(0f, moveBudgetMeters) + desiredMelee)
-                score += pawnReachMeleeBonus;
+                score += meleeReachBonus;
         }
 
-        if (unit.chessType == ChessUnitType.Guardian)
+        if (unit.chessType == ChessUnitType.Гончая)
         {
             if (soloTank)
-                score += guardianSoloTankActingBonus;
+                score += antiTankSoloBonus;
             else
-                score += guardianFootmenAliveActingNudge;
+                score += antiTankInfantryPresentBonus;
         }
 
         return score;
@@ -251,7 +255,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
     }
 
     /// <summary>
-    /// Цель движения: Guardian+танк со стволом — не уходим со стойки, если уже в max range и есть LOS;
+    /// Цель движения: Противотанковый боец против танка — не уходим со стойки, если уже в max range и есть LOS;
     /// без LOS — кольцо на дистанции, не центр танка.
     /// </summary>
     private Vector3 ComputeMoveTargetWorld(Unit selected, Unit chosenTarget, bool hasUnitTarget, BotController controller, Unit tankUnit)
@@ -266,7 +270,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
 
         float maxR = Mathf.Max(0.1f, w.Config.maxHitRangeMeters);
         float dist = HorizontalDistance(selected.transform.position, targetPos);
-        bool guardianVsTank = selected.chessType == ChessUnitType.Guardian && chosenTarget.IsTankUnit;
+        bool hasAntiTankTarget = selected.chessType == ChessUnitType.Гончая && chosenTarget.IsTankUnit;
         bool canSee = controller != null && controller.CanSeeTargetForBrain(selected, chosenTarget);
 
         float standoff = Mathf.Clamp(w.Config.maxHitRangeMeters * 0.8f, rangedPreferredMinDistance, rangedPreferredMaxDistance);
@@ -276,7 +280,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
         radial.Normalize();
         Vector3 standoffPoint = targetPos + radial * standoff;
 
-        if (guardianVsTank && dist <= maxR && canSee)
+        if (hasAntiTankTarget && dist <= maxR && canSee)
             return selected.transform.position;
 
         return standoffPoint;
@@ -285,7 +289,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
     private Unit ChooseTarget(Unit[] allUnits, Unit tankUnit, Unit attacker)
     {
         if (allUnits == null || tankUnit == null) return tankUnit;
-        if (attacker != null && attacker.chessType == ChessUnitType.Guardian)
+        if (attacker != null && attacker.chessType == ChessUnitType.Гончая)
             return tankUnit;
 
         var footmen = allUnits
@@ -294,7 +298,7 @@ public class Mission2BotBrain : MonoBehaviour, IBotMissionBrain
 
         if (footmen.Count == 0)
         {
-            // Только танк (или нет пехоты): не-Guardian не должен «целиться» в танк как в юнит — движение к объективам/якорю.
+            // Только танк (или нет пехоты): остальные бойцы обходят танк — движение к объективам/якорю.
             return null;
         }
 

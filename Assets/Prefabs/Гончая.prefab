@@ -565,7 +565,7 @@ GameObject:
   - component: {fileID: 2179168147756581262}
   - component: {fileID: 5199656928099220211}
   m_Layer: 3
-  m_Name: Guardian
+  m_Name: "\u0413\u043E\u043D\u0447\u0430\u044F"
   m_TagString: Unit
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

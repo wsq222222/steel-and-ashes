@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
 using UnityEngine.AI;
 using System.Collections;
@@ -27,7 +28,7 @@ public class Unit : MonoBehaviour
     public bool isFirstMove = true;             // Флаг для пешек или других юнитов
 
     [Header("AI / Mission targeting")]
-    [Tooltip("Tank: обычные враги PvBot не выбирают этот юнит как цель; только Guardian (ракетчик) может бить танк. Если на объекте есть Mission2.TankController, танк определяется и так.")]
+    [Tooltip("Tank: обычные враги PvBot не выбирают этот юнит как цель; только юнит с противотанковым оружием может бить танк. Если на объекте есть Mission2.TankController, танк определяется и так.")]
     [SerializeField] private UnitCombatRole combatRole = UnitCombatRole.Standard;
 
     /// <summary>Танк для правил выбора цели ботом. Учитывает роль и наличие Mission2.TankController.</summary>
@@ -95,9 +96,11 @@ public class Unit : MonoBehaviour
     private bool unitMoveSoundPlaying;
     private bool externalMoveSoundActive;
 
-    [Header("Bishop — звуки (fallback, если пусто на Weapon)")]
-    [SerializeField] private AudioClip bishopFireSound;
-    [SerializeField] private AudioClip bishopReloadSound;
+    [Header("Циклоп — запасные звуки оружия")]
+    [FormerlySerializedAs("bishopFireSound")]
+    [SerializeField] private AudioClip observerFireSound;
+    [FormerlySerializedAs("bishopReloadSound")]
+    [SerializeField] private AudioClip observerReloadSound;
     
     
     [Header("Audio Source (Optional)")]
@@ -119,17 +122,17 @@ public class Unit : MonoBehaviour
     [SerializeField] private float attackDamageStartTime = 0.2f; // Нормализованное время начала нанесения урона (0-1)
     [SerializeField] private float attackDamageEndTime = 0.8f; // Нормализованное время конца нанесения урона (0-1)
 
-    [Header("Ranged shoot animation (Bishop etc.)")]
-    [Tooltip("Состояние Animator, в котором дуло в позе выстрела (например BishopShoot).")]
-    [SerializeField] private string rangedShootStateName = "BishopShoot";
+    [Header("Анимация выстрела")]
+    [Tooltip("Состояние Animator, в котором дуло в позе выстрела (например Shoot).")]
+    [SerializeField] private string rangedShootStateName = "Shoot";
     [Tooltip("Нормализованное время клипа выстрела (0–1), когда наносится hitscan и трассер с дула.")]
     [SerializeField] [Range(0f, 1f)] private float rangedShootFireNormalizedTime = 0.72f;
     [Tooltip("Макс. ожидание входа в состояние выстрела (сек).")]
     [SerializeField] private float rangedShootAnimTimeoutSeconds = 1.5f;
 
     [Header("Ability Effects")]
-    private bool hasReflectionActive = false;        // Слон - отражение урона
-    private bool hasDamageReduction = false;         // Ладья - снижение урона на 50%
+    private bool hasReflectionActive = false;        // Отражение урона в шаблонном режиме
+    private bool hasDamageReduction = false;         // Снижение урона в шаблонном режиме
     private float damageMultiplier = 1.0f;          // Ферзь - увеличение урона (+20% = 1.2)
     private int reflectionTurnsRemaining = 0;        // Сколько ходов осталось эффекту отражения
     private int damageReductionTurnsRemaining = 0;   // Сколько ходов осталось эффекту снижения урона
@@ -586,7 +589,7 @@ public class Unit : MonoBehaviour
         return false;
     }
 
-    /// <summary>Вызывается из Animation Event на клипе BishopShoot (опционально).</summary>
+    /// <summary>Вызывается из Animation Event на клипе выстрела (опционально).</summary>
     public void AnimEvent_RangedFire()
     {
         if (equippedWeapon == null || !equippedWeapon.CanFire()) return;
@@ -691,7 +694,7 @@ public class Unit : MonoBehaviour
             amount = 0; // Полная блокировка урона
         }
         
-        // ЛАДЬЯ: Снижение урона на 50%
+        // Снижение урона на 50%
         if (hasDamageReduction)
         {
             amount = Mathf.RoundToInt(amount * 0.5f);
@@ -707,7 +710,7 @@ public class Unit : MonoBehaviour
             PlayTakeDamageSound();
         }
         
-        // СЛОН: Отражение урона обратно атакующему (если есть атакующий и урон был нанесен)
+        // Отражение урона обратно атакующему (если есть атакующий и урон был нанесен)
         if (hasReflectionActive && attacker != null && amount > 0)
         {
             // Отправляем урон обратно атакующему (отражаем уже уменьшенный урон)
@@ -805,28 +808,12 @@ public class Unit : MonoBehaviour
             return true;
         }
 
-        string deathState = GetDefaultDeathAnimatorStateName();
-        if (!string.IsNullOrEmpty(deathState))
-        {
-            int hash = Animator.StringToHash(deathState);
-            if (animator.HasState(0, hash))
-            {
-                animator.Play(hash, 0, 0f);
-                return true;
-            }
-        }
+        int deathState = Animator.StringToHash("Base Layer.Death");
+        if (!animator.HasState(0, deathState))
+            return false;
 
-        return false;
-    }
-
-    private string GetDefaultDeathAnimatorStateName()
-    {
-        switch (chessType)
-        {
-            case ChessUnitType.Guardian: return "GuardianDeath";
-            case ChessUnitType.Bishop: return "BishopDeath";
-            default: return "BishopDeath";
-        }
+        animator.Play(deathState, 0, 0f);
+        return true;
     }
 
     private static bool AnimatorHasTriggerParameter(Animator anim, string triggerName)
@@ -1025,7 +1012,7 @@ public class Unit : MonoBehaviour
     }
 
     /// <summary>
-    /// Выставляет bool Combat, если он есть в Animator Controller (например BishopController).
+    /// Выставляет bool Combat, если он есть в Animator Controller.
     /// Стойка прицела: зажата ПКМ при экипированном оружии.
     /// </summary>
     private void TrySetAnimatorCombat(bool combatStance)
@@ -1041,7 +1028,7 @@ public class Unit : MonoBehaviour
         }
     }
 
-    /// <summary>Bool Reload в Animator (BishopReload и др.), если параметр есть в контроллере.</summary>
+    /// <summary>Bool Reload в Animator при наличии параметра в контроллере.</summary>
     private void TrySetAnimatorReload(bool reloading)
     {
         if (animator == null) return;
@@ -1119,9 +1106,9 @@ public class Unit : MonoBehaviour
                 SetCurrentGridPosition(ChessGrid.Instance.WorldToGridCoords(transform.position));
                 // Если ход был легален (isMoveLegal == true в последнем Update), 
                 // можно пометить isFirstMove = false для пешек.
-                if (chessType == ChessUnitType.Pawn && startGridPosition != currentGridPosition)
+                if (chessType == ChessUnitType.Молот && startGridPosition != currentGridPosition)
                 {
-                    // Для пешки, если она сдвинулась, это был первый ход
+                    // Учитываем первый ход по клеткам
                     isFirstMove = false;
                 }
             }
@@ -1191,7 +1178,7 @@ public class Unit : MonoBehaviour
     }
     
     /// <summary>
-    /// Устанавливает эффект отражения урона (Слон)
+    /// Устанавливает эффект отражения урона
     /// </summary>
     /// <param name="active">Активен ли эффект</param>
     /// <param name="turns">На сколько ходов действует эффект</param>
@@ -1202,7 +1189,7 @@ public class Unit : MonoBehaviour
     }
     
     /// <summary>
-    /// Устанавливает эффект снижения урона (Ладья)
+    /// Устанавливает эффект снижения урона
     /// </summary>
     /// <param name="active">Активен ли эффект</param>
     /// <param name="turns">На сколько ходов действует эффект</param>
@@ -1237,7 +1224,7 @@ public class Unit : MonoBehaviour
     /// </summary>
     public void UpdateAbilityEffects()
     {
-        // Обновляем отражение (Слон) - эффект действует весь ход врага
+        // Обновляем отражение - эффект действует весь ход врага
         if (reflectionTurnsRemaining > 0)
         {
             reflectionTurnsRemaining--;
@@ -1247,7 +1234,7 @@ public class Unit : MonoBehaviour
             }
         }
         
-        // Обновляем снижение урона (Ладья) - эффект действует весь ход врага
+        // Обновляем снижение урона - эффект действует весь ход врага
         if (damageReductionTurnsRemaining > 0)
         {
             damageReductionTurnsRemaining--;
@@ -1301,8 +1288,8 @@ public class Unit : MonoBehaviour
         return unitAudioSource;
     }
 
-    public AudioClip GetBishopFireSoundFallback() => bishopFireSound;
-    public AudioClip GetBishopReloadSoundFallback() => bishopReloadSound;
+    public AudioClip GetObserverFireSoundFallback() => observerFireSound;
+    public AudioClip GetObserverReloadSoundFallback() => observerReloadSound;
 
     public static void StopAllUnitMoveSounds()
     {

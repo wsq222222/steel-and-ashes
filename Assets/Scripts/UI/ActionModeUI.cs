@@ -327,7 +327,7 @@ public class ActionModeUI : MonoBehaviour
         
         if (controlledUnit != null)
         {
-            if (controlledUnit.chessType == ChessUnitType.Pawn)
+            if (controlledUnit.chessType == ChessUnitType.Молот)
             {
                 if (abilityPanel.activeSelf)
                     abilityPanel.SetActive(false);
@@ -354,7 +354,7 @@ public class ActionModeUI : MonoBehaviour
     {
         if (unit == null) return;
         
-        if (unit.chessType == ChessUnitType.Pawn)
+        if (unit.chessType == ChessUnitType.Молот)
         {
             if (abilityPanel != null && abilityPanel.activeSelf)
                 abilityPanel.SetActive(false);
@@ -533,10 +533,10 @@ public class ActionModeUI : MonoBehaviour
     {
         switch (type)
         {
-            case ChessUnitType.Pawn: return "Пешка";
+            case ChessUnitType.Молот: return nameof(ChessUnitType.Молот);
             case ChessUnitType.Horse: return "Конь";
-            case ChessUnitType.Bishop: return "Слон";
-            case ChessUnitType.Guardian: return "Ладья";
+            case ChessUnitType.Циклоп: return nameof(ChessUnitType.Циклоп);
+            case ChessUnitType.Гончая: return nameof(ChessUnitType.Гончая);
             case ChessUnitType.Queen: return "Ферзь";
             case ChessUnitType.King: return "Король";
             default: return "Неизвестно";
@@ -548,8 +548,8 @@ public class ActionModeUI : MonoBehaviour
         switch (type)
         {
             case ChessUnitType.Horse: return "Скачок";
-            case ChessUnitType.Bishop: return "Отражение";
-            case ChessUnitType.Guardian: return "Щит";
+            case ChessUnitType.Циклоп: return "Отражение";
+            case ChessUnitType.Гончая: return "Щит";
             case ChessUnitType.Queen: return "Усиление";
             case ChessUnitType.King: return "Исцеление";
             default: return "Нет способности";
@@ -562,9 +562,9 @@ public class ActionModeUI : MonoBehaviour
         {
             case ChessUnitType.Horse:
                 return "Телепортация на ближайшую валидную клетку в направлении взгляда";
-            case ChessUnitType.Bishop:
+            case ChessUnitType.Циклоп:
                 return "Отражает весь входящий урон обратно атакующему";
-            case ChessUnitType.Guardian:
+            case ChessUnitType.Гончая:
                 return "Снижает входящий урон на 50%";
             case ChessUnitType.Queen:
                 return "Увеличивает урон на 20%";

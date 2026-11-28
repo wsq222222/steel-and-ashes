@@ -41,9 +41,9 @@ public static class OsowiecOperationBuilder
         grid.cellSize = 1;
         Set(grid, so => so.FindProperty("originPosition").vector3Value = new Vector3(-53, 0, -32));
         OsowiecFieldCast.Prepare();
-        var infantry = ArmedUnit("Pawn", "Молот", OsowiecFieldCast.BuildWeapon("RamCarbine"));
-        var rifleman = ArmedUnit("Bishop", "Циклоп", OsowiecFieldCast.BuildWeapon("ObserverCarbine"));
-        var support = ArmedUnit("GuardianRig", "Гончая", OsowiecFieldCast.BuildWeapon("RunnerCarbine"));
+        var infantry = OsowiecFieldCast.BuildUnit(ChessUnitType.Молот, "Assault", OsowiecFieldCast.BuildWeapon("RamCarbine"));
+        var rifleman = OsowiecFieldCast.BuildUnit(ChessUnitType.Циклоп, "Scout", OsowiecFieldCast.BuildWeapon("ObserverCarbine"));
+        var support = OsowiecFieldCast.BuildUnit(ChessUnitType.Гончая, "Support", OsowiecFieldCast.BuildWeapon("RunnerCarbine"));
         var game = Required<GameManager>();
         Set(game, so =>
         {
@@ -287,9 +287,6 @@ public static class OsowiecOperationBuilder
         offer.FindPropertyRelative("costPoints").intValue = cost;
         offer.FindPropertyRelative("maxCopies").intValue = 2;
     }
-
-    static string ArmedUnit(string baseName, string displayName, Weapon rifle) =>
-        OsowiecFieldCast.BuildUnit(baseName, displayName, rifle);
 
     static Vector3 GroundSentryPost(Vector3 survey, string name)
     {

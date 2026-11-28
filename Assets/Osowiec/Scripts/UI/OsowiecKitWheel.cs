@@ -26,9 +26,9 @@ internal sealed class OsowiecKitWheel
         _ => UnityEngine.InputSystem.Mouse.current?.rightButton.wasPressedThisFrame == true
     };
     public static string Name(OsowiecKitItem item) => OsowiecMenuLanguage.Text(Names[(int)item]);
-    static int Count(Unit unit) => unit.chessType == ChessUnitType.Pawn ? 4 : 3;
+    static int Count(Unit unit) => unit.chessType == ChessUnitType.Молот ? 4 : 3;
     static OsowiecKitItem Slot(Unit unit, int index) =>
-        index == 2 && unit.chessType == ChessUnitType.Pawn ? OsowiecKitItem.Gas : (OsowiecKitItem)index;
+        index == 2 && unit.chessType == ChessUnitType.Молот ? OsowiecKitItem.Gas : (OsowiecKitItem)index;
     public void Begin(OsowiecKitItem equipped)
     {
         Open = true;
@@ -128,7 +128,7 @@ internal sealed class OsowiecKitWheel
     public void DrawAbility(Unit unit,bool cooling,bool scope)
     {
         float s=OsowiecHudPaint.Scale;
-        int icon=unit.chessType==ChessUnitType.Pawn?4:unit.chessType==ChessUnitType.Bishop?5:6;
+        int icon=unit.chessType==ChessUnitType.Молот?4:unit.chessType==ChessUnitType.Циклоп?5:6;
         string title=icon==4?"Пневмотолчок":icon==5?"Перископ":"Рывок";
         var rect=new Rect(Screen.width-302*s,Screen.height-119*s,279*s,85*s);
         OsowiecHudPaint.Panel(rect);
@@ -258,7 +258,7 @@ internal sealed class OsowiecKitWheel
             bool active=Hover==item;
             int quantity=OsowiecFieldKit.Remaining(unit,item);
             Picture(new Rect(point.x-37,point.y-37,74,59),Icon(item==OsowiecKitItem.Gas?7:i),quantity==0?new Color(.55f,.53f,.45f):active?Color.white:Paper);
-            string label=item==OsowiecKitItem.Grenade && unit.chessType==ChessUnitType.Pawn ? "Усиленная" : Name(item);
+            string label=item==OsowiecKitItem.Grenade && unit.chessType==ChessUnitType.Молот ? "Усиленная" : Name(item);
             string name=label+(quantity>=0 ? " ×"+quantity : "");
             Center(new Rect(point.x-62,point.y+20,124,29),name,20,quantity==0?Brass:active?Color.white:Paper);
         }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Дефолтные боевые клипы (Resources/CombatSfxLibrary). Подставляются, если на Weapon/Tank поля пустые.
@@ -6,11 +7,13 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "CombatSfxLibrary", menuName = "Steel and Ashes/Combat SFX Library")]
 public class CombatSfxLibrary : ScriptableObject
 {
-    [Header("Guardian (ракетчик)")]
-    public AudioClip guardianFire;
-    public AudioClip guardianReload;
+    [Header("Гончая")]
+    [FormerlySerializedAs("guardianFire")]
+    public AudioClip scoutFire;
+    [FormerlySerializedAs("guardianReload")]
+    public AudioClip scoutReload;
 
-    [Header("Unit (пехота: Pawn, Bishop, Guardian…)")]
+    [Header("Пехота")]
     public AudioClip unitMove;
 
     [Header("Tank")]
@@ -30,8 +33,8 @@ public class CombatSfxLibrary : ScriptableObject
         }
     }
 
-    public AudioClip GetGuardianFire() => guardianFire;
-    public AudioClip GetGuardianReload() => guardianReload;
+    public AudioClip GetScoutFire() => scoutFire;
+    public AudioClip GetScoutReload() => scoutReload;
     public AudioClip GetUnitMove() => unitMove;
     public AudioClip GetTankFire() => tankFire;
     public AudioClip GetTankReload() => tankReload;

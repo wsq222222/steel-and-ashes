@@ -45,9 +45,9 @@ public sealed class OsowiecDeploymentCardFace : MonoBehaviour, IPointerEnterHand
         title.text = unit.GetUnitDisplayName();
         mark.text = unit.chessType switch
         {
-            ChessUnitType.Pawn => "М",
-            ChessUnitType.Bishop => "Ц",
-            ChessUnitType.Guardian => "Г",
+            ChessUnitType.Молот => "М",
+            ChessUnitType.Циклоп => "Ц",
+            ChessUnitType.Гончая => "Г",
             _ => "О"
         };
         description.text = $"{OsowiecPlanner.MoveBudget(unit):0} м / ход";
@@ -56,8 +56,8 @@ public sealed class OsowiecDeploymentCardFace : MonoBehaviour, IPointerEnterHand
         {
             int column = unit.chessType switch
             {
-                ChessUnitType.Bishop => 1,
-                ChessUnitType.Guardian => 2,
+                ChessUnitType.Циклоп => 1,
+                ChessUnitType.Гончая => 2,
                 _ => 0
             };
             photograph.uvRect = new Rect(column / 3f + .033f, 0f, .267f, 1f);

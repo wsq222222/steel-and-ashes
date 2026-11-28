@@ -704,7 +704,7 @@ GameObject:
   - component: {fileID: 9137429168192386210}
   - component: {fileID: 283416485177575468}
   m_Layer: 3
-  m_Name: Assault-Unit
+  m_Name: "\u041C\u043E\u043B\u043E\u0442"
   m_TagString: Unit
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -802,8 +802,8 @@ MonoBehaviour:
   unitMoveSound: {fileID: 0}
   unitMoveSoundVolume: 0.167
   unitMoveSoundMinSpeed: 0.15
-  bishopFireSound: {fileID: 0}
-  bishopReloadSound: {fileID: 0}
+  observerFireSound: {fileID: 0}
+  observerReloadSound: {fileID: 0}
   unitAudioSource: {fileID: 0}
   unitDisplayNameOverride: "\u041C\u043E\u043B\u043E\u0442"
   tacticalPortrait: {fileID: 21300000, guid: b38e22b39ffb9114fb98dbd8b0df09d0, type: 3}
@@ -813,7 +813,7 @@ MonoBehaviour:
   attackStateName: attack
   attackDamageStartTime: 0.3
   attackDamageEndTime: 0.5
-  rangedShootStateName: BishopShoot
+  rangedShootStateName: Fire
   rangedShootFireNormalizedTime: 0.72
   rangedShootAnimTimeoutSeconds: 1.5
 --- !u!114 &3096574795852091619

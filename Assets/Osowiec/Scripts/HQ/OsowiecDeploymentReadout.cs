@@ -97,8 +97,8 @@ public sealed class OsowiecDeploymentReadout : MonoBehaviour
             if(index<0) continue;
             slots[index].text = unit.chessType switch
             {
-                ChessUnitType.Pawn => "М",
-                ChessUnitType.Bishop => "Ц",
+                ChessUnitType.Молот => "М",
+                ChessUnitType.Циклоп => "Ц",
                 _ => "Г"
             };
             count++;

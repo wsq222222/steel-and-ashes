@@ -13,8 +13,8 @@ public class UnitAbilities : MonoBehaviour
     
     [Header("Ability Cooldowns (in turns)")]
     private int cooldownHorseJump = 0;           // Конь - Скачок (КД: 1 ход)
-    private int cooldownBishopReflection = 0;     // Слон - Отражение (КД: 3 хода)
-    private int cooldownGuardianShield = 0;      // Ладья - Щит (КД: 3 хода)
+    private int reflectionCooldown = 0;     // Отражение (КД: 3 хода)
+    private int shieldCooldown = 0;      // Щит (КД: 3 хода)
     private int cooldownQueenDamageBoost = 0;    // Ферзь - Увеличение урона (КД: 5 ходов)
     private int cooldownKingHeal = 0;            // Король - Хил (КД: 4 хода)
     
@@ -56,11 +56,11 @@ public class UnitAbilities : MonoBehaviour
             case ChessUnitType.Horse:
                 ActivateHorseJump();
                 break;
-            case ChessUnitType.Bishop:
-                ActivateBishopReflection();
+            case ChessUnitType.Циклоп:
+                ActivateReflection();
                 break;
-            case ChessUnitType.Guardian:
-                ActivateGuardianShield();
+            case ChessUnitType.Гончая:
+                ActivateShield();
                 break;
             case ChessUnitType.Queen:
                 ActivateQueenDamageBoost();
@@ -68,8 +68,8 @@ public class UnitAbilities : MonoBehaviour
             case ChessUnitType.King:
                 ActivateKingHeal();
                 break;
-            case ChessUnitType.Pawn:
-                // Пешка не имеет способностей
+            case ChessUnitType.Молот:
+                // В шаблонном режиме активной способности нет
                 break;
         }
     }
@@ -197,14 +197,14 @@ public class UnitAbilities : MonoBehaviour
         return true;
     }
     
-    // ========== СЛОН: Отражение урона (КД: 3 хода) ==========
+    // ========== Отражение урона (КД: 3 хода) ==========
     
     /// <summary>
-    /// Активирует способность слона - отражение урона на следующий ход врага
+    /// Активирует отражение урона на следующий ход врага
     /// </summary>
-    private void ActivateBishopReflection()
+    private void ActivateReflection()
     {
-        if (cooldownBishopReflection > 0)
+        if (reflectionCooldown > 0)
         {
             return;
         }
@@ -212,17 +212,17 @@ public class UnitAbilities : MonoBehaviour
         // Активируем отражение на 2 хода (весь следующий ход врага + начало следующего хода игрока для отключения)
         // Эффект будет активен весь ход врага и отключится в начале следующего хода игрока
         unit.SetReflectionActive(true, 2);
-        cooldownBishopReflection = 3;
+        reflectionCooldown = 3;
     }
     
-    // ========== ЛАДЬЯ: Уменьшение урона (КД: 3 хода) ==========
+    // ========== Уменьшение урона (КД: 3 хода) ==========
     
     /// <summary>
-    /// Активирует способность ладьи - уменьшение входящего урона на 50% на следующий ход врага
+    /// Активирует уменьшение входящего урона на 50% на следующий ход врага
     /// </summary>
-    private void ActivateGuardianShield()
+    private void ActivateShield()
     {
-        if (cooldownGuardianShield > 0)
+        if (shieldCooldown > 0)
         {
             return;
         }
@@ -230,7 +230,7 @@ public class UnitAbilities : MonoBehaviour
         // Активируем снижение урона на 2 хода (весь следующий ход врага + начало следующего хода игрока для отключения)
         // Эффект будет активен весь ход врага и отключится в начале следующего хода игрока
         unit.SetDamageReduction(true, 2);
-        cooldownGuardianShield = 3;
+        shieldCooldown = 3;
     }
     
     // ========== ФЕРЗЬ: Увеличение урона (КД: 5 ходов) ==========
@@ -311,8 +311,8 @@ public class UnitAbilities : MonoBehaviour
     public void UpdateCooldowns()
     {
         if (cooldownHorseJump > 0) cooldownHorseJump--;
-        if (cooldownBishopReflection > 0) cooldownBishopReflection--;
-        if (cooldownGuardianShield > 0) cooldownGuardianShield--;
+        if (reflectionCooldown > 0) reflectionCooldown--;
+        if (shieldCooldown > 0) shieldCooldown--;
         if (cooldownQueenDamageBoost > 0) cooldownQueenDamageBoost--;
         if (cooldownKingHeal > 0) cooldownKingHeal--;
     }
@@ -325,8 +325,8 @@ public class UnitAbilities : MonoBehaviour
         switch (unit.chessType)
         {
             case ChessUnitType.Horse: return cooldownHorseJump;
-            case ChessUnitType.Bishop: return cooldownBishopReflection;
-            case ChessUnitType.Guardian: return cooldownGuardianShield;
+            case ChessUnitType.Циклоп: return reflectionCooldown;
+            case ChessUnitType.Гончая: return shieldCooldown;
             case ChessUnitType.Queen: return cooldownQueenDamageBoost;
             case ChessUnitType.King: return cooldownKingHeal;
             default: return 0;
@@ -349,8 +349,8 @@ public class UnitAbilities : MonoBehaviour
         switch (unit.chessType)
         {
             case ChessUnitType.Horse: cooldownHorseJump = turns; break;
-            case ChessUnitType.Bishop: cooldownBishopReflection = turns; break;
-            case ChessUnitType.Guardian: cooldownGuardianShield = turns; break;
+            case ChessUnitType.Циклоп: reflectionCooldown = turns; break;
+            case ChessUnitType.Гончая: shieldCooldown = turns; break;
             case ChessUnitType.Queen: cooldownQueenDamageBoost = turns; break;
             case ChessUnitType.King: cooldownKingHeal = turns; break;
         }
